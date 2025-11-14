@@ -38,6 +38,8 @@
         </div>
     </nav>
 
+
+
     <!-- CONTAINER PRINCIPAL -->
     <div class="container">
         
@@ -159,6 +161,10 @@
             const url = document.getElementById('moodleUrl').value.trim();
             const token = document.getElementById('moodleToken').value.trim();
             const geminiKey = document.getElementById('geminiKey').value.trim();
+            const deepseekKey = 'sk-cba9755f54d246d39fdd24421c8ee1ca';
+
+            // Inicializar el gestor con ambas keys
+            aiAPI.initialize(geminiKey, deepseekKey);
 
             // Validar campos
             if (!url || !token || !geminiKey) {
@@ -363,6 +369,18 @@
                 }
             );
         }
+
+        // Ver qué APIs están disponibles
+console.log(aiAPI.getAvailableProviders()); // ['gemini', 'deepseek']
+
+// Ver cuál está activa
+console.log(aiAPI.getProvider()); // 'gemini'
+
+// Cambiar a DeepSeek
+aiAPI.setProvider('deepseek');
+
+// Cambiar de vuelta a Gemini
+aiAPI.setProvider('gemini');
     </script>
 </body>
 </html>
