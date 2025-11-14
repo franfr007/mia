@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIANOIA - Generador de Contenido</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .content-types {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .content-type-card {
+            padding: 1.5rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .content-type-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        .content-type-card.active {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .content-type-card .icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .generated-content {
+            background: #f5f5f5;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+        }
+
+        .preview-box {
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            border: 1px solid #ddd;
+        }
+
+        .templates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .template-card {
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .template-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .history-item {
+            padding: 1rem;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="navbar-brand">
+                <img src="dianoia_logo.jpg" alt="DIANOIA" class="navbar-logo">
+                <h1>DIANOIA - Generador</h1>
+            </div>
+            <div class="navbar-info">
+                <button class="btn btn-outline" onclick="Utils.navigateTo('index.html')" style="margin-right: 1rem;">
+                    ← Volver al inicio
+                </button>
+                <div class="user-badge" id="userInfo" style="display: none;">
+                    <span>👤</span>
+                    <span id="userName">Cargando...</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Selección de tipo -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📝 ¿Qué querés generar?</h2>
+            </div>
+            <div class="content-types">
+                <div class="content-type-card active" onclick="selectContentType('intro-seccion')">
+                    <div class="icon">📚</div>
+                    <h3>Intro Sección</h3>
+                    <p style="font-size: 0.85rem; color: var(--gray);">Texto de presentación</p>
+                </div>
+                <div class="content-type-card" onclick="selectContentType('descripcion-actividad')">
+                    <div class="icon">📝</div>
+                    <h3>Descripción</h3>
+                    <p style="font-size: 0.85rem; color: var(--gray);">Para actividades</p>
+                </div>
+                <div class="content-type-card" onclick="selectContentType('consigna-tarea')">
+                    <div class="icon">✍️</div>
+                    <h3>Consigna</h3>
+                    <p style="font-size: 0.85rem; color: var(--gray);">Instrucciones claras</p>
+                </div>
+                <div class="content-type-card" onclick="selectContentType('anuncio')">
+                    <div class="icon">📢</div>
+                    <h3>Anuncio</h3>
+                    <p style="font-size: 0.85rem; color: var(--gray);">Comunicación</p>
+                </div>
+                <div class="content-type-card" onclick="selectContentType('etiqueta')">
+                    <div class="icon">🏷️</div>
+                    <h3>Etiqueta</h3>
+                    <p style="font-size: 0.85rem; color: var(--gray);">Texto breve</p>
+                </div>
+                <div class="content-type-card" onclick="selectContentType('pagina-contenido')">
+                    <div class="icon">📄</div>
+                    <h3>Página</h3>
+                    <p style="font-size: 0.85rem; color: var(--gray);">Contenido extenso</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario generador -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">✨ Generador con IA</h2>
+            </div>
+            
+            <div class="form-group">
+                <label>Tema o contexto:</label>
+                <input type="text" id="topic" class="form-control" placeholder="Ej: Filosofía antigua - Los presocráticos">
+                <small>Indicá sobre qué tema querés generar el contenido</small>
+            </div>
+
+            <div class="form-group">
+                <label>Instrucciones adicionales (opcional):</label>
+                <textarea id="instructions" class="form-control" rows="3" placeholder="Ej: Que sea motivador, incluir preguntas reflexivas, mencionar a Tales y Heráclito..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Extensión:</label>
+                <select id="length" class="form-control">
+                    <option value="corto">Corto (50-100 palabras)</option>
+                    <option value="medio" selected>Medio (100-200 palabras)</option>
+                    <option value="largo">Largo (200-400 palabras)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="includeHtml" checked>
+                    Generar con formato HTML
+                </label>
+            </div>
+
+            <button class="btn btn-primary" onclick="generateContent()">
+                ✨ Generar con IA
+            </button>
+        </div>
+
+        <!-- Resultado -->
+        <div class="card hidden" id="resultPanel">
+            <div class="card-header">
+                <h2 class="card-title">📋 Contenido Generado</h2>
+                <button class="btn btn-secondary" onclick="copyToClipboard()">
+                    📋 Copiar
+                </button>
+            </div>
+            
+            <div class="generated-content">
+                <div style="margin-bottom: 1rem;">
+                    <strong>Para copiar en Moodle:</strong>
+                </div>
+                <textarea id="generatedText" class="form-control" rows="12" readonly></textarea>
+            </div>
+
+            <div class="preview-box">
+                <strong style="display: block; margin-bottom: 0.5rem;">Vista previa:</strong>
+                <div id="previewContent"></div>
+            </div>
+
+            <button class="btn btn-outline" onclick="generateAgain()">
+                🔄 Generar otra versión
+            </button>
+        </div>
+
+        <!-- Templates rápidos -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">⚡ Templates Rápidos</h2>
+            </div>
+            <p style="margin-bottom: 1rem;">Hacé click en un template para cargarlo:</p>
+            <div class="templates-grid" id="templatesGrid"></div>
+        </div>
+
+        <!-- Historial -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🕒 Últimas Generaciones</h2>
+                <button class="btn btn-outline" onclick="clearHistory()">Limpiar</button>
+            </div>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/utils.js"></script>
+    <script src="js/moodle-api.js"></script>
+    <script src="js/gemini-api.js"></script>
+    
+    <script>
+        let selectedType = 'intro-seccion';
+        let history = JSON.parse(localStorage.getItem('contentHistory') || '[]');
+
+        const templates = {
+            'intro-seccion': [
+                {
+                    name: 'Introducción académica',
+                    prompt: 'una introducción académica formal que presente los temas de esta sección, sus objetivos y por qué son relevantes'
+                },
+                {
+                    name: 'Motivacional',
+                    prompt: 'un texto motivador que invite a los estudiantes a explorar los contenidos con entusiasmo'
+                },
+                {
+                    name: 'Con preguntas',
+                    prompt: 'una introducción que plantee preguntas reflexivas sobre el tema para despertar curiosidad'
+                }
+            ],
+            'descripcion-actividad': [
+                {
+                    name: 'Objetivos claros',
+                    prompt: 'una descripción que explique claramente los objetivos de aprendizaje de esta actividad'
+                },
+                {
+                    name: 'Práctica',
+                    prompt: 'una descripción que enfatice la aplicación práctica y el valor de esta actividad'
+                }
+            ],
+            'consigna-tarea': [
+                {
+                    name: 'Detallada',
+                    prompt: 'una consigna completa con objetivos, instrucciones paso a paso y criterios de evaluación'
+                },
+                {
+                    name: 'Breve y clara',
+                    prompt: 'una consigna concisa y directa con lo esencial que deben hacer los estudiantes'
+                }
+            ]
+        };
+
+        window.onload = function() {
+            if (!moodleAPI.isConfigured()) {
+                Utils.showAlert('No hay configuración. Redirigiendo...', 'error');
+                setTimeout(() => Utils.navigateTo('index.html'), 2000);
+                return;
+            }
+
+            loadTemplates();
+            loadHistory();
+        };
+
+        function selectContentType(type) {
+            selectedType = type;
+            document.querySelectorAll('.content-type-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            loadTemplates();
+        }
+
+        function loadTemplates() {
+            const grid = document.getElementById('templatesGrid');
+            grid.innerHTML = '';
+
+            const typeTemplates = templates[selectedType] || templates['intro-seccion'];
+            
+            typeTemplates.forEach(template => {
+                const card = document.createElement('div');
+                card.className = 'template-card';
+                card.innerHTML = `
+                    <strong>${template.name}</strong>
+                    <p style="font-size: 0.85rem; color: var(--gray); margin: 0.5rem 0 0 0;">
+                        ${template.prompt.substring(0, 80)}...
+                    </p>
+                `;
+                card.onclick = () => useTemplate(template);
+                grid.appendChild(card);
+            });
+        }
+
+        function useTemplate(template) {
+            const topic = document.getElementById('topic').value || 'este tema';
+            document.getElementById('instructions').value = `Generá ${template.prompt}`;
+            Utils.showAlert('Template cargado. Completá el tema y generá', 'success');
+        }
+
+        async function generateContent() {
+            const topic = document.getElementById('topic').value.trim();
+            const instructions = document.getElementById('instructions').value.trim();
+            const length = document.getElementById('length').value;
+            const includeHtml = document.getElementById('includeHtml').checked;
+
+            if (!topic) {
+                Utils.showAlert('Por favor ingresá un tema', 'warning');
+                return;
+            }
+
+            const lengthMap = {
+                'corto': '50-100 palabras',
+                'medio': '100-200 palabras',
+                'largo': '200-400 palabras'
+            };
+
+            const typeMap = {
+                'intro-seccion': 'texto introductorio para una sección del curso',
+                'descripcion-actividad': 'descripción clara para una actividad',
+                'consigna-tarea': 'consigna detallada para una tarea',
+                'anuncio': 'anuncio informativo',
+                'etiqueta': 'etiqueta breve e informativa',
+                'pagina-contenido': 'contenido educativo completo para una página'
+            };
+
+            let prompt = `Generá un ${typeMap[selectedType]} sobre: ${topic}
+
+Requisitos:
+- Extensión: ${lengthMap[length]}
+- Tono: Académico pero accesible
+- Usar conjugación argentina (vos)
+${instructions ? `- Instrucciones adicionales: ${instructions}` : ''}
+${includeHtml ? '- Formato: HTML con etiquetas <p>, <strong>, <ul>, <li>' : '- Formato: texto plano'}
+- NO incluir título principal (solo el contenido)
+
+Generá el contenido directamente, sin explicaciones adicionales.`;
+
+            Utils.showLoading('Generando contenido con IA...');
+
+            try {
+                const content = await geminiAPI.call(prompt);
+                
+                document.getElementById('generatedText').value = content;
+                document.getElementById('previewContent').innerHTML = content;
+                document.getElementById('resultPanel').classList.remove('hidden');
+                
+                // Guardar en historial
+                saveToHistory(topic, content, selectedType);
+                
+                Utils.hideLoading();
+                document.getElementById('resultPanel').scrollIntoView({ behavior: 'smooth' });
+                
+            } catch (error) {
+                Utils.hideLoading();
+                Utils.showAlert('Error generando contenido: ' + error.message, 'error');
+            }
+        }
+
+        function generateAgain() {
+            generateContent();
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('generatedText').value;
+            navigator.clipboard.writeText(text).then(() => {
+                Utils.showAlert('✅ Copiado al portapapeles', 'success');
+            }).catch(err => {
+                Utils.showAlert('Error al copiar', 'error');
+            });
+        }
+
+        function saveToHistory(topic, content, type) {
+            const item = {
+                topic,
+                content: content.substring(0, 200),
+                fullContent: content,
+                type,
+                date: new Date().toISOString()
+            };
+            
+            history.unshift(item);
+            if (history.length > 10) history = history.slice(0, 10);
+            
+            localStorage.setItem('contentHistory', JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const list = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                list.innerHTML = '<p style="color: var(--gray);">No hay generaciones previas</p>';
+                return;
+            }
+
+            list.innerHTML = '';
+            history.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong>${item.topic}</strong>
+                        <span style="font-size: 0.85rem; color: var(--gray);">
+                            ${new Date(item.date).toLocaleDateString('es-AR')}
+                        </span>
+                    </div>
+                    <p style="margin: 0; color: var(--gray); font-size: 0.9rem;">
+                        ${item.content}...
+                    </p>
+                    <button class="btn btn-sm btn-outline" onclick="loadFromHistory(${index})" style="margin-top: 0.5rem;">
+                        📋 Ver completo
+                    </button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function loadFromHistory(index) {
+            const item = history[index];
+            document.getElementById('generatedText').value = item.fullContent;
+            document.getElementById('previewContent').innerHTML = item.fullContent;
+            document.getElementById('resultPanel').classList.remove('hidden');
+            document.getElementById('resultPanel').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function clearHistory() {
+            if (confirm('¿Seguro que querés limpiar el historial?')) {
+                history = [];
+                localStorage.removeItem('contentHistory');
+                loadHistory();
+                Utils.showAlert('Historial limpiado', 'success');
+            }
+        }
+    </script>
+</body>
+</html>
