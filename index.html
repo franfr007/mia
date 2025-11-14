@@ -15,6 +15,9 @@
                 <h1>DIANOIA</h1>
             </div>
             <div class="navbar-info">
+                <button class="btn btn-outline" onclick="Utils.navigateTo('content-generator.html')" style="display: none; margin-right: 1rem;" id="generatorBtn">
+                    ✨ Generador IA
+                </button>
                 <button class="btn btn-outline" onclick="Utils.navigateTo('resources.html')" style="display: none; margin-right: 1rem;" id="resourcesBtn">
                     ➕ Crear Recursos
                 </button>
@@ -179,6 +182,7 @@
                 const userInfo = await moodleAPI.getSiteInfo();
                 document.getElementById('userName').textContent = userInfo.fullname;
                 document.getElementById('userInfo').style.display = 'flex';
+                document.getElementById('generatorBtn').style.display = 'block';
                 document.getElementById('resourcesBtn').style.display = 'block';
                 document.getElementById('gradesBtn').style.display = 'block';
                 document.getElementById('messagingBtn').style.display = 'block';
