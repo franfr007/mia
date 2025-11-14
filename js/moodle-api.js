@@ -6,7 +6,7 @@ class MoodleAPI {
         this.userInfo = null;
     }
 
-    // Cargar configuración desde localStorage
+    // Cargar configuraciÃ³n desde localStorage
     loadConfig() {
         const saved = localStorage.getItem('moodleConfig');
         if (saved) {
@@ -19,25 +19,25 @@ class MoodleAPI {
         };
     }
 
-    // Guardar configuración
+    // Guardar configuraciÃ³n
     saveConfig(url, token, geminiKey) {
         this.config = { url, token, geminiKey };
         localStorage.setItem('moodleConfig', JSON.stringify(this.config));
     }
 
-    // Verificar si está configurado
+    // Verificar si estÃ¡ configurado
     isConfigured() {
         return this.config.url && this.config.token && this.config.geminiKey;
     }
 
-    // Llamada genérica a la API de Moodle
+    // Llamada genÃ©rica a la API de Moodle
     async call(wsfunction, params = {}) {
         const url = new URL(`${this.config.url}/webservice/rest/server.php`);
         url.searchParams.append('wstoken', this.config.token);
         url.searchParams.append('wsfunction', wsfunction);
         url.searchParams.append('moodlewsrestformat', 'json');
 
-        // Agregar parámetros
+        // Agregar parÃ¡metros
         Object.keys(params).forEach(key => {
             const value = params[key];
             if (Array.isArray(value)) {
@@ -75,7 +75,7 @@ class MoodleAPI {
         }
     }
 
-    // === INFORMACIÓN DEL USUARIO ===
+    // === INFORMACIÃ“N DEL USUARIO ===
     async getSiteInfo() {
         return await this.call('core_webservice_get_site_info');
     }
@@ -166,7 +166,7 @@ class MoodleAPI {
             
             return data;
         } catch (error) {
-            console.error('Error guardando calificación:', error);
+            console.error('Error guardando calificaciÃ³n:', error);
             throw error;
         }
     }
@@ -186,7 +186,7 @@ class MoodleAPI {
     }
 
     async getAttemptReview(attemptid) {
-        // Para intentos finalizados - esta es la función correcta
+        // Para intentos finalizados - esta es la funciÃ³n correcta
         return await this.call('mod_quiz_get_attempt_review', { attemptid });
     }
 
@@ -194,16 +194,16 @@ class MoodleAPI {
         return await this.call('mod_quiz_get_attempt_review', { attemptid });
     }
 
-    // === CALIFICACIÓN DE QUIZZES (MÉTODO CORRECTO PARA PROFESORES) ===
+    // === CALIFICACIÃ“N DE QUIZZES (MÃ‰TODO CORRECTO PARA PROFESORES) ===
     
     /**
      * Calificar pregunta de quiz usando la API correcta de Moodle
-     * Esta función usa un enfoque directo con la base de datos de Moodle
+     * Esta funciÃ³n usa un enfoque directo con la base de datos de Moodle
      */
     async gradeQuizQuestion(attemptid, slot, grade, comment = '') {
         try {
-            // MÉTODO 1: Usar mod_quiz_submit_grading_form (introducido en Moodle 3.1)
-            // Esta es la función correcta para que profesores califiquen intentos de estudiantes
+            // MÃ‰TODO 1: Usar mod_quiz_submit_grading_form (introducido en Moodle 3.1)
+            // Esta es la funciÃ³n correcta para que profesores califiquen intentos de estudiantes
             
             const formData = new URLSearchParams();
             formData.append('wstoken', this.config.token);
@@ -237,34 +237,34 @@ class MoodleAPI {
             const data = await response.json();
 
             if (data && data.exception) {
-                console.warn('mod_quiz_submit_grading_form falló, intentando método alternativo...');
+                console.warn('mod_quiz_submit_grading_form fallÃ³, intentando mÃ©todo alternativo...');
                 return await this.gradeQuizQuestionAlternative(attemptid, slot, grade, comment);
             }
             
             return { success: true, data };
         } catch (error) {
             console.error('Error en gradeQuizQuestion:', error);
-            // Intentar método alternativo
+            // Intentar mÃ©todo alternativo
             return await this.gradeQuizQuestionAlternative(attemptid, slot, grade, comment);
         }
     }
 
     /**
-     * Método alternativo: Usar directamente core_question_update_flag
-     * y luego actualizar manualmente la calificación
+     * MÃ©todo alternativo: Usar directamente core_question_update_flag
+     * y luego actualizar manualmente la calificaciÃ³n
      */
     async gradeQuizQuestionAlternative(attemptid, slot, grade, comment = '') {
         try {
-            // Obtener información del attempt
+            // Obtener informaciÃ³n del attempt
             const attemptData = await this.getAttemptReview(attemptid);
             const question = attemptData.questions.find(q => q.slot === slot);
             
             if (!question) {
-                throw new Error(`No se encontró la pregunta en el slot ${slot}`);
+                throw new Error(`No se encontrÃ³ la pregunta en el slot ${slot}`);
             }
 
-            // Usar la función de grading para módulo de quiz
-            // Esta es una función menos documentada pero que funciona para profesores
+            // Usar la funciÃ³n de grading para mÃ³dulo de quiz
+            // Esta es una funciÃ³n menos documentada pero que funciona para profesores
             const formData = new URLSearchParams();
             formData.append('wstoken', this.config.token);
             formData.append('wsfunction', 'core_question_update_flag');
@@ -291,36 +291,36 @@ class MoodleAPI {
                 throw new Error(data.message || 'Error actualizando pregunta');
             }
 
-            // Ahora intentar guardar la calificación usando un POST directo
+            // Ahora intentar guardar la calificaciÃ³n usando un POST directo
             // al endpoint de Moodle (esto requiere permisos de profesor)
             return await this.directGradeUpdate(attemptid, slot, grade, comment, question);
 
         } catch (error) {
-            console.error('Error en método alternativo:', error);
+            console.error('Error en mÃ©todo alternativo:', error);
             throw new Error(
                 `No se pudo calificar la pregunta. ` +
                 `Esto puede deberse a:\n` +
                 `1. Tu usuario no tiene permisos de profesor/calificador en este curso\n` +
-                `2. El intento ya fue calificado o está cerrado\n` +
-                `3. La versión de Moodle no soporta esta función vía API\n\n` +
-                `Error técnico: ${error.message}`
+                `2. El intento ya fue calificado o estÃ¡ cerrado\n` +
+                `3. La versiÃ³n de Moodle no soporta esta funciÃ³n vÃ­a API\n\n` +
+                `Error tÃ©cnico: ${error.message}`
             );
         }
     }
 
     /**
-     * Actualización directa de calificación (requiere permisos de profesor)
+     * ActualizaciÃ³n directa de calificaciÃ³n (requiere permisos de profesor)
      */
     async directGradeUpdate(attemptid, slot, grade, comment, questionData) {
         try {
-            // Este método usa el endpoint de comentarios/calificaciones de Moodle
+            // Este mÃ©todo usa el endpoint de comentarios/calificaciones de Moodle
             // Equivalente a lo que hace la interfaz web cuando un profesor califica
             
             const formData = new URLSearchParams();
             formData.append('wstoken', this.config.token);
             formData.append('moodlewsrestformat', 'json');
             
-            // Construir los datos de la calificación
+            // Construir los datos de la calificaciÃ³n
             const gradeData = {
                 attemptid: attemptid,
                 slot: slot,
@@ -336,7 +336,7 @@ class MoodleAPI {
             });
 
             // Usar el endpoint interno de Moodle para actualizar calificaciones
-            // Este endpoint existe pero no está documentado en la API pública
+            // Este endpoint existe pero no estÃ¡ documentado en la API pÃºblica
             const response = await fetch(`${this.config.url}/question/behaviour/manualgraded/ajax.php`, {
                 method: 'POST',
                 headers: {
@@ -358,13 +358,13 @@ class MoodleAPI {
             return { success: true, data };
 
         } catch (error) {
-            console.error('Error en actualización directa:', error);
+            console.error('Error en actualizaciÃ³n directa:', error);
             throw error;
         }
     }
 
     /**
-     * Guardar múltiples calificaciones de un intento
+     * Guardar mÃºltiples calificaciones de un intento
      */
     async gradeMultipleQuizQuestions(attemptid, grades) {
         // grades es un array de { slot, grade, comment }
@@ -496,7 +496,7 @@ class MoodleAPI {
             const result = await this.call('core_message_get_unread_conversations_count', {});
             return typeof result === 'number' ? result : 0;
         } catch (error) {
-            console.error('Error obteniendo contador de mensajes no leídos:', error);
+            console.error('Error obteniendo contador de mensajes no leÃ­dos:', error);
             return 0;
         }
     }
@@ -607,6 +607,229 @@ class MoodleAPI {
             criterianame: 'search',
             criteriavalue: query
         });
+    }
+
+    // === CREAR RECURSOS ===
+    
+    /**
+     * Crear una etiqueta (label) en un curso
+     */
+    async createLabel(courseid, sectionnum, name, intro) {
+        const formData = new URLSearchParams();
+        formData.append('wstoken', this.config.token);
+        formData.append('wsfunction', 'core_course_create_contents');
+        formData.append('moodlewsrestformat', 'json');
+        formData.append('courseid', courseid);
+        formData.append('sectionnum', sectionnum);
+        formData.append('contents[0][modulename]', 'label');
+        formData.append('contents[0][name]', name);
+        formData.append('contents[0][intro]', intro);
+        formData.append('contents[0][introformat]', '1'); // HTML
+        formData.append('contents[0][visible]', '1');
+
+        try {
+            const response = await fetch(`${this.config.url}/webservice/rest/server.php`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            
+            const data = await response.json();
+
+            if (data && data.exception) {
+                throw new Error(data.message || 'Error creando etiqueta');
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Error creando etiqueta:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Crear un recurso URL en un curso
+     */
+    async createUrl(courseid, sectionnum, name, intro, externalurl) {
+        const formData = new URLSearchParams();
+        formData.append('wstoken', this.config.token);
+        formData.append('wsfunction', 'core_course_create_contents');
+        formData.append('moodlewsrestformat', 'json');
+        formData.append('courseid', courseid);
+        formData.append('sectionnum', sectionnum);
+        formData.append('contents[0][modulename]', 'url');
+        formData.append('contents[0][name]', name);
+        formData.append('contents[0][intro]', intro);
+        formData.append('contents[0][introformat]', '1');
+        formData.append('contents[0][externalurl]', externalurl);
+        formData.append('contents[0][visible]', '1');
+
+        try {
+            const response = await fetch(`${this.config.url}/webservice/rest/server.php`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            
+            const data = await response.json();
+
+            if (data && data.exception) {
+                throw new Error(data.message || 'Error creando URL');
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Error creando URL:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Crear una tarea (assignment) en un curso
+     */
+    async createAssignment(courseid, sectionnum, name, intro, duedate = null, allowsubmissionsfromdate = null) {
+        const formData = new URLSearchParams();
+        formData.append('wstoken', this.config.token);
+        formData.append('wsfunction', 'core_course_create_contents');
+        formData.append('moodlewsrestformat', 'json');
+        formData.append('courseid', courseid);
+        formData.append('sectionnum', sectionnum);
+        formData.append('contents[0][modulename]', 'assign');
+        formData.append('contents[0][name]', name);
+        formData.append('contents[0][intro]', intro);
+        formData.append('contents[0][introformat]', '1');
+        formData.append('contents[0][visible]', '1');
+        
+        if (duedate) {
+            formData.append('contents[0][duedate]', duedate);
+        }
+        if (allowsubmissionsfromdate) {
+            formData.append('contents[0][allowsubmissionsfromdate]', allowsubmissionsfromdate);
+        }
+
+        try {
+            const response = await fetch(`${this.config.url}/webservice/rest/server.php`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            
+            const data = await response.json();
+
+            if (data && data.exception) {
+                throw new Error(data.message || 'Error creando tarea');
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Error creando tarea:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Crear un foro en un curso
+     */
+    async createForum(courseid, sectionnum, name, intro, forumtype = 'general') {
+        const formData = new URLSearchParams();
+        formData.append('wstoken', this.config.token);
+        formData.append('wsfunction', 'core_course_create_contents');
+        formData.append('moodlewsrestformat', 'json');
+        formData.append('courseid', courseid);
+        formData.append('sectionnum', sectionnum);
+        formData.append('contents[0][modulename]', 'forum');
+        formData.append('contents[0][name]', name);
+        formData.append('contents[0][intro]', intro);
+        formData.append('contents[0][introformat]', '1');
+        formData.append('contents[0][type]', forumtype); // general, single, eachuser, qanda, blog
+        formData.append('contents[0][visible]', '1');
+
+        try {
+            const response = await fetch(`${this.config.url}/webservice/rest/server.php`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            
+            const data = await response.json();
+
+            if (data && data.exception) {
+                throw new Error(data.message || 'Error creando foro');
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Error creando foro:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Crear una página en un curso
+     */
+    async createPage(courseid, sectionnum, name, intro, content) {
+        const formData = new URLSearchParams();
+        formData.append('wstoken', this.config.token);
+        formData.append('wsfunction', 'core_course_create_contents');
+        formData.append('moodlewsrestformat', 'json');
+        formData.append('courseid', courseid);
+        formData.append('sectionnum', sectionnum);
+        formData.append('contents[0][modulename]', 'page');
+        formData.append('contents[0][name]', name);
+        formData.append('contents[0][intro]', intro);
+        formData.append('contents[0][introformat]', '1');
+        formData.append('contents[0][content]', content);
+        formData.append('contents[0][contentformat]', '1');
+        formData.append('contents[0][visible]', '1');
+
+        try {
+            const response = await fetch(`${this.config.url}/webservice/rest/server.php`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            
+            const data = await response.json();
+
+            if (data && data.exception) {
+                throw new Error(data.message || 'Error creando página');
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Error creando página:', error);
+            throw error;
+        }
     }
 }
 
