@@ -727,8 +727,10 @@ Extensión: 200-300 palabras`;
             }
 
             // Mostrar loading
-            document.getElementById('loadingOverlay').classList.remove('hidden');
-            document.getElementById('loadingText').textContent = `Creando ${type}...`;
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            if (loadingText) loadingText.textContent = `Creando ${type}...`;
+            loadingOverlay.classList.remove('hidden');
 
             try {
                 let result;
