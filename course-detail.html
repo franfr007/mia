@@ -446,18 +446,27 @@
 
             container.innerHTML = courseData.files.map(file => {
                 const fileUrl = file.fileurl || file.contentfiles?.[0]?.fileurl;
+                const isPdf = fileUrl && fileUrl.toLowerCase().includes('.pdf');
+                
                 return `
                     <div class="card mb-2">
                         <div class="flex-between">
-                            <div>
+                            <div style="flex: 1;">
                                 <h4 style="color: var(--dianoia-blue);">📎 ${file.name}</h4>
                                 <p style="color: var(--gray); font-size: 0.9rem;">
                                     ${Utils.truncate(file.intro || 'Archivo del curso', 100)}
                                 </p>
                             </div>
-                            <button class="btn btn-primary" onclick="descargarArchivo('${fileUrl}')">
-                                Descargar
-                            </button>
+                            <div style="display: flex; gap: 0.5rem;">
+                                ${isPdf ? `
+                                    <button class="btn btn-secondary" onclick="generateFileSummary('${fileUrl}', '${file.name.replace(/'/g, "\\'")}')">
+                                        ✨ Resumen IA
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-primary" onclick="descargarArchivo('${fileUrl}')">
+                                    Descargar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1059,6 +1068,121 @@
 
         function editarConIA(pageId, type) {
             Utils.showAlert('Función en desarrollo: Editar con IA', 'info');
+        }
+
+        // Generar resumen de archivo con IA
+        async function generateFileSummary(fileUrl, fileName) {
+            if (!fileUrl) {
+                Utils.showAlert('URL del archivo no disponible', 'error');
+                return;
+            }
+
+            Utils.showLoading('Descargando y analizando archivo con IA...');
+
+            try {
+                // Agregar token a la URL
+                const token = moodleAPI.config.token;
+                const separator = fileUrl.includes('?') ? '&' : '?';
+                const urlWithToken = `${fileUrl}${separator}token=${token}`;
+
+                // Descargar el archivo
+                const response = await fetch(urlWithToken);
+                if (!response.ok) {
+                    throw new Error('Error al descargar el archivo');
+                }
+
+                const blob = await response.blob();
+                
+                // Convertir a base64
+                const base64Data = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64 = reader.result.split(',')[1];
+                        resolve(base64);
+                    };
+                    reader.onerror = () => reject(new Error('Error al leer el archivo'));
+                    reader.readAsDataURL(blob);
+                });
+
+                // Generar resumen con Gemini
+                const prompt = `Analizá el siguiente documento y generá un resumen académico completo que incluya:
+
+1. **Tema principal** (en 1-2 oraciones)
+2. **Ideas clave** (3-5 puntos principales)
+3. **Conceptos importantes** mencionados
+4. **Conclusiones** o ideas finales
+
+El resumen debe ser claro, académico y útil como descripción del documento para estudiantes.
+
+Formato: Usá HTML con <p>, <strong>, <ul>, <li> para estructurar el contenido.`;
+
+                // Llamar a Gemini API con el documento
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${moodleAPI.config.geminiKey}`;
+                
+                const geminiResponse = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: prompt },
+                                {
+                                    inline_data: {
+                                        mime_type: 'application/pdf',
+                                        data: base64Data
+                                    }
+                                }
+                            ]
+                        }]
+                    })
+                });
+
+                if (!geminiResponse.ok) {
+                    throw new Error('Error al procesar con Gemini');
+                }
+
+                const data = await geminiResponse.json();
+                const summary = data.candidates[0].content.parts[0].text;
+
+                Utils.hideLoading();
+
+                // Mostrar resumen en modal
+                openModal(`📄 Resumen de: ${fileName}`, `
+                    <div class="alert alert-success">
+                        ✨ Resumen generado con IA
+                    </div>
+                    
+                    <div class="generated-content" style="background: #f5f5f5; padding: 1rem; border-radius: 6px; margin: 1rem 0;">
+                        <strong style="display: block; margin-bottom: 0.5rem;">Para copiar y usar como descripción:</strong>
+                        <textarea id="summaryText" class="form-control" rows="12" readonly>${summary}</textarea>
+                    </div>
+
+                    <div style="background: white; padding: 1rem; border-radius: 6px; border: 1px solid #ddd;">
+                        <strong style="display: block; margin-bottom: 0.5rem;">Vista previa:</strong>
+                        <div>${summary}</div>
+                    </div>
+
+                    <button class="btn btn-primary mt-2" onclick="copySummaryToClipboard()">
+                        📋 Copiar resumen
+                    </button>
+                `);
+
+            } catch (error) {
+                Utils.hideLoading();
+                console.error('Error:', error);
+                Utils.showAlert(`Error al generar resumen: ${error.message}`, 'error');
+            }
+        }
+
+        function copySummaryToClipboard() {
+            const text = document.getElementById('summaryText').value;
+            navigator.clipboard.writeText(text).then(() => {
+                Utils.showAlert('✅ Resumen copiado al portapapeles', 'success');
+            }).catch(() => {
+                Utils.showAlert('Error al copiar', 'error');
+            });
         }
 
         // Recargar curso
