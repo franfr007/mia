@@ -15,18 +15,21 @@
                 <h1>DIANOIA</h1>
             </div>
             <div class="navbar-info">
+                <button class="btn btn-outline" onclick="Utils.navigateTo('resources.html')" style="display: none; margin-right: 1rem;" id="resourcesBtn">
+                    ➕ Crear Recursos
+                </button>
                 <button class="btn btn-outline" onclick="Utils.navigateTo('grades.html')" style="display: none; margin-right: 1rem;" id="gradesBtn">
-                    ðŸ“Š Calificaciones
+                    📊 Calificaciones
                 </button>
                 <button class="btn btn-outline" onclick="Utils.navigateTo('messaging.html')" style="display: none; margin-right: 1rem;" id="messagingBtn">
-                    ðŸ’¬ Mensajes
+                    💬 Mensajes
                 </button>
                 <div class="user-badge" id="userInfo" style="display: none;">
-                    <span>ðŸ‘¤</span>
+                    <span>👤</span>
                     <span id="userName">Cargando...</span>
                 </div>
                 <button class="btn btn-secondary" onclick="logout()" style="display: none;" id="logoutBtn">
-                    Cerrar sesiÃ³n
+                    Cerrar sesión
                 </button>
             </div>
         </div>
@@ -35,10 +38,10 @@
     <!-- CONTAINER PRINCIPAL -->
     <div class="container">
         
-        <!-- PANEL DE CONFIGURACIÃ“N -->
+        <!-- PANEL DE CONFIGURACIÓN -->
         <div class="card" id="configPanel">
             <div class="card-header">
-                <h2 class="card-title">ðŸ”§ ConfiguraciÃ³n de ConexiÃ³n</h2>
+                <h2 class="card-title">🔧 Configuración de Conexión</h2>
             </div>
             <div class="form-group">
                 <label>URL de Moodle:</label>
@@ -48,42 +51,42 @@
             <div class="form-group">
                 <label>Token de API de Moodle:</label>
                 <input type="password" id="moodleToken" class="form-control" placeholder="Tu token de Moodle">
-                <small>ObtÃ©n tu token desde Moodle o contacta al administrador</small>
+                <small>Obtén tu token desde Moodle o contacta al administrador</small>
             </div>
             <div class="form-group">
                 <label>API Key de Gemini:</label>
                 <input type="password" id="geminiKey" class="form-control" placeholder="Tu API Key de Gemini">
-                <small>ObtÃ©n tu clave gratuita en: <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+                <small>Obtén tu clave gratuita en: <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
             </div>
             <button class="btn btn-primary" onclick="conectar()">
-                ðŸš€ Conectar con Moodle
+                🚀 Conectar con Moodle
             </button>
             <div id="configAlert" class="mt-2"></div>
         </div>
 
-        <!-- PANEL DE ESTADÃSTICAS -->
+        <!-- PANEL DE ESTADÍSTICAS -->
         <div id="statsPanel" class="hidden">
             <div class="stats-grid">
                 <div class="stat-card">
-                    <h3>ðŸ“š Materias activas</h3>
+                    <h3>📚 Materias activas</h3>
                     <div class="number" id="totalCourses">0</div>
                 </div>
                 <div class="stat-card">
-                    <h3>ðŸ“ Entregas pendientes</h3>
+                    <h3>📝 Entregas pendientes</h3>
                     <div class="number" id="totalSubmissions">-</div>
                 </div>
                 <div class="stat-card">
-                    <h3>â“ Cuestionarios</h3>
+                    <h3>❓ Cuestionarios</h3>
                     <div class="number" id="totalQuizzes">-</div>
                 </div>
                 <div class="stat-card">
-                    <h3>ðŸ’¬ Foros activos</h3>
+                    <h3>💬 Foros activos</h3>
                     <div class="number" id="totalForums">-</div>
                 </div>
             </div>
         </div>
 
-        <!-- BARRA DE BÃšSQUEDA Y FILTROS -->
+        <!-- BARRA DE BÚSQUEDA Y FILTROS -->
         <div id="filtersPanel" class="card hidden" style="margin-bottom: 2rem;">
             <div class="flex-between" style="flex-wrap: wrap; gap: 1rem;">
                 <div class="form-group" style="margin: 0; flex: 1; min-width: 250px;">
@@ -91,15 +94,15 @@
                         type="text" 
                         id="searchCourses" 
                         class="form-control" 
-                        placeholder="ðŸ” Buscar materia..."
+                        placeholder="🔍 Buscar materia..."
                         onkeyup="filtrarMaterias()"
                     >
                 </div>
                 <div class="form-group" style="margin: 0;">
                     <select id="sortCourses" class="form-control" onchange="ordenarMaterias()">
                         <option value="name">Ordenar por nombre</option>
-                        <option value="recent">MÃ¡s recientes</option>
-                        <option value="oldest">MÃ¡s antiguas</option>
+                        <option value="recent">Más recientes</option>
+                        <option value="oldest">Más antiguas</option>
                     </select>
                 </div>
             </div>
@@ -108,9 +111,9 @@
         <!-- PANEL DE MATERIAS -->
         <div id="coursesPanel" class="hidden">
             <div class="card-header">
-                <h2 class="card-title">ðŸ“š Mis Materias</h2>
+                <h2 class="card-title">📚 Mis Materias</h2>
                 <button class="btn btn-outline" onclick="recargarMaterias()">
-                    ðŸ”„ Recargar
+                    🔄 Recargar
                 </button>
             </div>
             <div class="grid grid-3" id="coursesGrid"></div>
@@ -134,10 +137,10 @@
         let allCourses = [];
         let filteredCourses = [];
 
-        // Inicializar al cargar la pÃ¡gina
+        // Inicializar al cargar la página
         window.onload = async function() {
             if (moodleAPI.isConfigured()) {
-                // Si ya estÃ¡ configurado, intentar conectar automÃ¡ticamente
+                // Si ya está configurado, intentar conectar automáticamente
                 document.getElementById('moodleUrl').value = moodleAPI.config.url;
                 document.getElementById('moodleToken').value = moodleAPI.config.token;
                 document.getElementById('geminiKey').value = moodleAPI.config.geminiKey;
@@ -146,7 +149,7 @@
             }
         };
 
-        // FunciÃ³n para conectar con Moodle
+        // Función para conectar con Moodle
         async function conectar() {
             const url = document.getElementById('moodleUrl').value.trim();
             const token = document.getElementById('moodleToken').value.trim();
@@ -159,11 +162,11 @@
             }
 
             if (!Utils.validateUrl(url)) {
-                Utils.showAlert('URL de Moodle no vÃ¡lida', 'error');
+                Utils.showAlert('URL de Moodle no válida', 'error');
                 return;
             }
 
-            // Guardar configuraciÃ³n
+            // Guardar configuración
             moodleAPI.saveConfig(url, token, geminiKey);
             geminiAPI.setApiKey(geminiKey);
 
@@ -172,7 +175,7 @@
             document.getElementById('configPanel').classList.add('hidden');
 
             try {
-                // Obtener informaciÃ³n del usuario
+                // Obtener información del usuario
                 const userInfo = await moodleAPI.getSiteInfo();
                 document.getElementById('userName').textContent = userInfo.fullname;
                 document.getElementById('userInfo').style.display = 'flex';
@@ -190,7 +193,7 @@
                 document.getElementById('filtersPanel').classList.remove('hidden');
                 document.getElementById('coursesPanel').classList.remove('hidden');
 
-                Utils.showAlert('âœ… ConexiÃ³n exitosa con Moodle', 'success');
+                Utils.showAlert('✅ Conexión exitosa con Moodle', 'success');
 
             } catch (error) {
                 console.error('Error:', error);
@@ -206,10 +209,10 @@
                 allCourses = await moodleAPI.getCourses();
                 filteredCourses = [...allCourses];
 
-                // Actualizar estadÃ­sticas
+                // Actualizar estadísticas
                 document.getElementById('totalCourses').textContent = allCourses.length;
 
-                // Cargar estadÃ­sticas adicionales (en paralelo)
+                // Cargar estadísticas adicionales (en paralelo)
                 cargarEstadisticasGenerales();
 
                 // Mostrar materias
@@ -221,7 +224,7 @@
             }
         }
 
-        // Cargar estadÃ­sticas generales
+        // Cargar estadísticas generales
         async function cargarEstadisticasGenerales() {
             try {
                 const courseIds = allCourses.map(c => c.id);
@@ -252,7 +255,7 @@
                 document.getElementById('totalForums').textContent = forums.length || 0;
 
             } catch (error) {
-                console.error('Error cargando estadÃ­sticas:', error);
+                console.error('Error cargando estadísticas:', error);
             }
         }
 
@@ -283,12 +286,12 @@
                     </p>
                     <div class="course-card-meta">
                         <span class="badge badge-primary">
-                            ðŸ“… ${course.startdate ? Utils.formatDate(course.startdate, 'short') : 'Sin fecha'}
+                            📅 ${course.startdate ? Utils.formatDate(course.startdate, 'short') : 'Sin fecha'}
                         </span>
-                        ${course.visible ? '<span class="badge badge-success">âœ“ Visible</span>' : '<span class="badge badge-warning">âŠ— Oculto</span>'}
+                        ${course.visible ? '<span class="badge badge-success">✓ Visible</span>' : '<span class="badge badge-warning">⊗ Oculto</span>'}
                     </div>
                     <button class="btn btn-primary mt-2" style="width: 100%;">
-                        Ver recursos â†’
+                        Ver recursos →
                     </button>
                 `;
 
@@ -344,10 +347,10 @@
             }
         }
 
-        // Cerrar sesiÃ³n
+        // Cerrar sesión
         function logout() {
             Utils.confirm(
-                'Â¿Seguro que quieres cerrar sesiÃ³n? Se borrarÃ¡n tus credenciales guardadas.',
+                '¿Seguro que quieres cerrar sesión? Se borrarán tus credenciales guardadas.',
                 () => {
                     localStorage.removeItem('moodleConfig');
                     location.reload();
