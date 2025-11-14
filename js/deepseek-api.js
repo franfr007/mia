@@ -407,6 +407,154 @@ Dirígte al estudiante directamente.`;
 
         return await this.call(prompt);
     }
+
+    // === ANÁLISIS DE PREGUNTA INDIVIDUAL ===
+    async analizarPreguntaIndividual(preguntaTexto, respuestaEstudiante, materia, puntajeMax, nombreEstudiante = '') {
+        const prompt = `Eres un profesor de ${materia} evaluando una pregunta de cuestionario.
+
+PREGUNTA:
+${preguntaTexto}
+
+RESPUESTA DEL ESTUDIANTE:
+${respuestaEstudiante}
+
+Puntaje máximo: ${puntajeMax} puntos
+
+Proporciona una evaluación completa, clara y concisa en el siguiente formato:
+
+PUNTAJE SUGERIDO: [X]/${puntajeMax} puntos
+
+JUSTIFICACIÓN:
+[Explica por qué este puntaje. Menciona qué está bien y qué falta o podría mejorar. Sé específico.]
+
+RETROALIMENTACIÓN PARA EL ESTUDIANTE:
+${nombreEstudiante || 'Hola'},
+
+[Proporciona un comentario completo y constructivo:
+- Reconoce los aspectos positivos de la respuesta
+- Señala las áreas que necesitan mejora con ejemplos específicos
+- Sugiere cómo el estudiante puede profundizar o corregir
+- Usa tono cordial y académico (vos: tenés, mostrás, etc.)
+- Sé específico y educativo
+- Guía sin dar la respuesta completa]
+
+Asegúrate de ser claro, completo y conciso. La retroalimentación debe ser útil para el aprendizaje del estudiante.`;
+
+        return await this.call(prompt, { maxTokens: 20000 });
+    }
+
+    // === ANÁLISIS DE CUESTIONARIO ===
+    async analizarCuestionario(intentoData) {
+        const prompt = `Eres un profesor que analiza el desempeño de un estudiante en un cuestionario.
+
+INFORMACIÓN DEL CUESTIONARIO:
+- Nombre: ${intentoData.quizName}
+- Estudiante: ${intentoData.studentName}
+- Intento: ${intentoData.attempt}
+- Puntuación: ${intentoData.sumgrades}/${intentoData.maxgrades || 10}
+
+PREGUNTAS Y RESPUESTAS:
+${intentoData.questions || 'No disponible'}
+
+Proporciona un análisis pedagógico que incluya:
+
+1. EVALUACIÓN GENERAL: Un resumen del desempeño del estudiante
+
+2. FORTALEZAS: Identifica las áreas donde el estudiante demostró buen conocimiento
+
+3. ÁREAS DE MEJORA: Señala los conceptos que necesita reforzar
+
+4. RECOMENDACIONES: Sugiere estrategias específicas de estudio
+
+5. COMENTARIOS MOTIVACIONALES: Brinda palabras de aliento
+
+IMPORTANTE: Dirígte al estudiante en segunda persona (tú/usted)`;
+
+        return await this.call(prompt);
+    }
+
+    // === MODERACIÓN DE FOROS ===
+    async moderarDiscusion(posts, contexto = '') {
+        const prompt = `Eres un profesor moderando una discusión en un foro académico.
+
+${contexto ? `CONTEXTO:\n${contexto}\n\n` : ''}
+
+POSTS:
+${posts}
+
+Analiza la discusión y proporciona:
+
+1. RESUMEN: Resumen de los puntos principales discutidos
+
+2. CALIDAD DE LA PARTICIPACIÓN: Evalúa la calidad de las contribuciones
+
+3. PUNTOS DESTACADOS: Identifica contribuciones valiosas
+
+4. OPORTUNIDADES DE MEJORA: Sugiere cómo mejorar la discusión
+
+5. PREGUNTA DE SEGUIMIENTO: Propone una pregunta para profundizar el debate`;
+
+        return await this.call(prompt);
+    }
+
+    // === RESPUESTA AUTOMÁTICA EN FOROS ===
+    async generarRespuestaForo(pregunta, contexto = '') {
+        const prompt = `Eres un profesor asistiendo a un estudiante en un foro.
+
+${contexto ? `CONTEXTO DEL CURSO:\n${contexto}\n\n` : ''}
+
+PREGUNTA DEL ESTUDIANTE:
+${pregunta}
+
+Genera una respuesta que:
+1. Sea educativa y guíe al estudiante, no que dé la respuesta directa
+2. Haga preguntas que promuevan el pensamiento crítico
+3. Sugiera recursos o lecturas adicionales
+4. Sea alentadora y constructiva
+
+IMPORTANTE: No des respuestas completas a ejercicios o tareas, guía el pensamiento.`;
+
+        return await this.call(prompt);
+    }
+
+    // === GENERACIÓN DE CONTENIDO ===
+    async generarContenidoPagina(tema, nivel = 'universitario', longitud = 'medio') {
+        const prompt = `Genera contenido educativo sobre el siguiente tema:
+
+TEMA: ${tema}
+NIVEL: ${nivel}
+LONGITUD: ${longitud} (corto: 300 palabras, medio: 600 palabras, largo: 1000+ palabras)
+
+Estructura el contenido con:
+1. Introducción clara y enganchadora
+2. Desarrollo del tema con ejemplos
+3. Conceptos clave destacados
+4. Conclusión
+5. Preguntas para reflexionar
+
+Formato: HTML limpio (usa <h2>, <p>, <ul>, <strong>, etc.)`;
+
+        return await this.call(prompt, { maxTokens: 4096 });
+    }
+
+    // === GENERACIÓN DE ETIQUETAS ===
+    async generarEtiqueta(tipo, contenidoSolicitado) {
+        const prompt = `Genera el texto para una etiqueta de Moodle tipo "${tipo}" sobre: "${contenidoSolicitado}"
+
+REQUISITOS:
+- 4-6 oraciones (más extenso que lo habitual)
+- Texto motivador, cálido y profesional
+- Apropiado para contexto educativo universitario
+- Incluye detalles relevantes y específicos
+- Tono acogedor pero académico
+- SIN formato markdown, solo texto plano
+
+IMPORTANTE: Genera un mensaje completo y atractivo que realmente conecte con los estudiantes.
+
+Ahora genera el texto para el tipo "${tipo}":`;
+
+        return await this.call(prompt, { maxTokens: 800, temperature: 0.7 });
+    }
 }
 
 // Exportar instancia global
