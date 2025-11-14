@@ -1139,8 +1139,15 @@ Formato: Usá HTML con <p>, <strong>, <ul>, <li> para estructurar el contenido.`
                     })
                 });
 
+                if (geminiResponse.status === 429) {
+                    Utils.hideLoading();
+                    Utils.showAlert('⏳ Límite de uso de Gemini alcanzado. Esperá 1-2 minutos e intentá de nuevo.', 'warning');
+                    return;
+                }
+
                 if (!geminiResponse.ok) {
-                    throw new Error('Error al procesar con Gemini');
+                    const errorData = await geminiResponse.json();
+                    throw new Error(errorData.error?.message || 'Error al procesar con Gemini');
                 }
 
                 const data = await geminiResponse.json();
