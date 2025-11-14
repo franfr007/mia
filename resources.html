@@ -501,7 +501,7 @@
             button.textContent = '⏳ Generando...';
 
             try {
-                const content = await geminiAPI.generateText(prompt);
+                const content = await geminiAPI.call(prompt);
                 field.value = content;
                 Utils.showAlert('✨ Contenido generado con IA', 'success');
             } catch (error) {
@@ -526,7 +526,7 @@
             button.textContent = '⏳ Mejorando...';
 
             try {
-                const improvedText = await geminiAPI.generateText(
+                const improvedText = await geminiAPI.call(
                     `Mejorá el siguiente texto para que sea más claro, profesional y académico. Mantené el sentido original pero mejorá la redacción:\n\n${currentText}`
                 );
                 field.value = improvedText;
@@ -567,7 +567,7 @@ El contenido debe:
 
 Generá solo el contenido HTML, sin explicaciones adicionales.`;
 
-                const content = await geminiAPI.generateText(prompt);
+                const content = await geminiAPI.call(prompt);
                 document.getElementById('page-content').value = content;
                 Utils.showAlert('✨ Contenido completo generado', 'success');
             } catch (error) {
@@ -608,7 +608,7 @@ La descripción debe:
 - Dar pautas básicas de uso
 - Ser breve pero completa (100-150 palabras)`;
 
-                const intro = await geminiAPI.generateText(prompt);
+                const intro = await geminiAPI.call(prompt);
                 document.getElementById('forum-intro').value = intro;
                 Utils.showAlert('✨ Descripción generada', 'success');
             } catch (error) {
@@ -643,7 +643,7 @@ La consigna debe incluir:
 
 Extensión: 200-300 palabras`;
 
-                const intro = await geminiAPI.generateText(prompt);
+                const intro = await geminiAPI.call(prompt);
                 document.getElementById('assignment-intro').value = intro;
                 Utils.showAlert('✨ Consigna generada', 'success');
             } catch (error) {
