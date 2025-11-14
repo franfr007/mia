@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIANOIA - Gestión de Recursos</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .resource-types {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .resource-type-card {
+            padding: 1.5rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .resource-type-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        .resource-type-card.active {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .resource-type-card h3 {
+            margin: 0.5rem 0;
+            color: var(--text);
+        }
+
+        .resource-type-card .icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-section {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .ai-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .preview-area {
+            background: #f5f5f5;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            min-height: 100px;
+        }
+
+        .section-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .section-btn {
+            padding: 0.5rem;
+            border: 2px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .section-btn:hover {
+            border-color: var(--primary);
+        }
+
+        .section-btn.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="navbar-brand">
+                <img src="dianoia_logo.jpg" alt="DIANOIA" class="navbar-logo">
+                <h1>DIANOIA - Recursos</h1>
+            </div>
+            <div class="navbar-info">
+                <button class="btn btn-outline" onclick="Utils.navigateTo('index.html')" style="margin-right: 1rem;">
+                    ← Volver al inicio
+                </button>
+                <div class="user-badge" id="userInfo" style="display: none;">
+                    <span>👤</span>
+                    <span id="userName">Cargando...</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Selección de curso -->
+        <div class="card" id="courseSelector">
+            <div class="card-header">
+                <h2 class="card-title">📚 Seleccionar Materia</h2>
+            </div>
+            <div class="form-group">
+                <label>Materia:</label>
+                <select id="courseSelect" class="form-control" onchange="loadCourseSections()">
+                    <option value="">Cargando materias...</option>
+                </select>
+            </div>
+            <div class="form-group" id="sectionSelectorContainer" style="display: none;">
+                <label>Sección del curso:</label>
+                <div class="section-selector" id="sectionSelector"></div>
+            </div>
+        </div>
+
+        <!-- Selección de tipo de recurso -->
+        <div class="card" id="resourceTypeSelector" style="display: none;">
+            <div class="card-header">
+                <h2 class="card-title">🎯 Tipo de Recurso a Crear</h2>
+            </div>
+            <div class="resource-types">
+                <div class="resource-type-card" onclick="selectResourceType('label')">
+                    <div class="icon">🏷️</div>
+                    <h3>Etiqueta</h3>
+                    <p style="font-size: 0.9rem; color: var(--gray);">Texto informativo</p>
+                </div>
+                <div class="resource-type-card" onclick="selectResourceType('url')">
+                    <div class="icon">🔗</div>
+                    <h3>URL</h3>
+                    <p style="font-size: 0.9rem; color: var(--gray);">Enlace externo</p>
+                </div>
+                <div class="resource-type-card" onclick="selectResourceType('page')">
+                    <div class="icon">📄</div>
+                    <h3>Página</h3>
+                    <p style="font-size: 0.9rem; color: var(--gray);">Contenido HTML</p>
+                </div>
+                <div class="resource-type-card" onclick="selectResourceType('forum')">
+                    <div class="icon">💬</div>
+                    <h3>Foro</h3>
+                    <p style="font-size: 0.9rem; color: var(--gray);">Espacio de debate</p>
+                </div>
+                <div class="resource-type-card" onclick="selectResourceType('assignment')">
+                    <div class="icon">📝</div>
+                    <h3>Tarea</h3>
+                    <p style="font-size: 0.9rem; color: var(--gray);">Actividad con entrega</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formularios para cada tipo de recurso -->
+        
+        <!-- ETIQUETA -->
+        <div class="card hidden" id="form-label">
+            <div class="card-header">
+                <h2 class="card-title">🏷️ Crear Etiqueta</h2>
+                <button class="btn btn-outline" onclick="resetForm()">Cancelar</button>
+            </div>
+            <div class="form-section">
+                <div class="form-group">
+                    <label>Nombre de la etiqueta:</label>
+                    <input type="text" id="label-name" class="form-control" placeholder="Ej: Información importante">
+                    <div class="ai-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="generateWithAI('label-name', 'Genera un título breve y descriptivo para una etiqueta informativa en un curso.')">
+                            ✨ Generar con IA
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Contenido (HTML):</label>
+                    <textarea id="label-intro" class="form-control" rows="6" placeholder="Contenido de la etiqueta..."></textarea>
+                    <div class="ai-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="generateWithAI('label-intro', 'Genera un texto informativo y útil para una etiqueta en un curso universitario.')">
+                            ✨ Generar con IA
+                        </button>
+                        <button class="btn btn-sm btn-outline" onclick="improveWithAI('label-intro')">
+                            🔧 Mejorar texto
+                        </button>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="createResource('label')">
+                    Crear Etiqueta
+                </button>
+            </div>
+        </div>
+
+        <!-- URL -->
+        <div class="card hidden" id="form-url">
+            <div class="card-header">
+                <h2 class="card-title">🔗 Crear Enlace URL</h2>
+                <button class="btn btn-outline" onclick="resetForm()">Cancelar</button>
+            </div>
+            <div class="form-section">
+                <div class="form-group">
+                    <label>Nombre del recurso:</label>
+                    <input type="text" id="url-name" class="form-control" placeholder="Ej: Video tutorial sobre...">
+                    <div class="ai-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="generateWithAI('url-name', 'Genera un título descriptivo para un enlace a un recurso externo educativo.')">
+                            ✨ Generar con IA
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>URL del recurso:</label>
+                    <input type="url" id="url-externalurl" class="form-control" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>Descripción:</label>
+                    <textarea id="url-intro" class="form-control" rows="4" placeholder="Descripción del recurso..."></textarea>
+                    <div class="ai-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="generateWithAI('url-intro', 'Genera una descripción breve de por qué este enlace es útil para los estudiantes.')">
+                            ✨ Generar con IA
+                        </button>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="createResource('url')">
+                    Crear Enlace
+                </button>
+            </div>
+        </div>
+
+        <!-- PÁGINA -->
+        <div class="card hidden" id="form-page">
+            <div class="card-header">
+                <h2 class="card-title">📄 Crear Página</h2>
+                <button class="btn btn-outline" onclick="resetForm()">Cancelar</button>
+            </div>
+            <div class="form-section">
+                <div class="form-group">
+                    <label>Título de la página:</label>
+                    <input type="text" id="page-name" class="form-control" placeholder="Ej: Guía de estudio - Tema 1">
+                    <div class="ai-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="generateWithAI('page-name', 'Genera un título atractivo para una página de contenido educativo.')">
+                            ✨ Generar con IA
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Introducción breve:</label>
+                    <textarea id="page-intro" class="form-control" rows="3" placeholder="Introducción que verán los estudiantes..."></textarea>
+                    <div class="ai-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="generateWithAI('page-intro', 'Genera una introducción breve y motivadora para una página de contenido.')">
+                            ✨ Generar con IA
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Contenido principal (HTML):</label>
+                    <textarea id="page-content" class="form-control" rows="12" placeholder="Contenido completo de la página..."></textarea>
+                    <div class="ai-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="generatePageContentWithAI()">
+                            ✨ Generar contenido completo
+                        </button>
+                        <button class="btn btn-sm btn-outline" onclick="improveWithAI('page-content')">
+                            🔧 Mejorar contenido
+                        </button>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="createResource('page')">
+                    Crear Página
+                </button>
+            </div>
+        </div>
+
+        <!-- FORO -->
+        <div class="card hidden" id="form-forum">
+            <div class="card-header">
+                <h2 class="card-title">💬 Crear Foro</h2>
+                <button class="btn btn-outline" onclick="resetForm()">Cancelar</button>
+            </div>
+            <div class="form-section">
+                <div class="form-group">
+                    <label>Nombre del foro:</label>
+                    <input type="text" id="forum-name" class="form-control" placeholder="Ej: Dudas y consultas - Tema 2">
+                    <div class="ai-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="generateWithAI('forum-name', 'Genera un título invitador para un foro de discusión académica.')">
+                            ✨ Generar con IA
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de foro:</label>
+                    <select id="forum-type" class="form-control">
+                        <option value="general">General (discusión abierta)</option>
+                        <option value="single">Una única discusión</option>
+                        <option value="eachuser">Cada usuario inicia una discusión</option>
+                        <option value="qanda">Preguntas y respuestas</option>
+                        <option value="blog">Formato blog</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Descripción del foro:</label>
+                    <textarea id="forum-intro" class="form-control" rows="5" placeholder="Describe el propósito del foro..."></textarea>
+                    <div class="ai-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="generateForumIntroWithAI()">
+                            ✨ Generar descripción
+                        </button>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="createResource('forum')">
+                    Crear Foro
+                </button>
+            </div>
+        </div>
+
+        <!-- TAREA -->
+        <div class="card hidden" id="form-assignment">
+            <div class="card-header">
+                <h2 class="card-title">📝 Crear Tarea</h2>
+                <button class="btn btn-outline" onclick="resetForm()">Cancelar</button>
+            </div>
+            <div class="form-section">
+                <div class="form-group">
+                    <label>Nombre de la tarea:</label>
+                    <input type="text" id="assignment-name" class="form-control" placeholder="Ej: Ensayo sobre...">
+                    <div class="ai-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="generateWithAI('assignment-name', 'Genera un título claro para una tarea académica.')">
+                            ✨ Generar con IA
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Descripción de la tarea:</label>
+                    <textarea id="assignment-intro" class="form-control" rows="8" placeholder="Instrucciones detalladas para los estudiantes..."></textarea>
+                    <div class="ai-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="generateAssignmentWithAI()">
+                            ✨ Generar consigna completa
+                        </button>
+                        <button class="btn btn-sm btn-outline" onclick="improveWithAI('assignment-intro')">
+                            🔧 Mejorar instrucciones
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Fecha de entrega (opcional):</label>
+                    <input type="datetime-local" id="assignment-duedate" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Disponible desde (opcional):</label>
+                    <input type="datetime-local" id="assignment-allowsubmissionsfromdate" class="form-control">
+                </div>
+                <button class="btn btn-primary" onclick="createResource('assignment')">
+                    Crear Tarea
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading overlay -->
+        <div id="loadingOverlay" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+            <div class="loading" style="background: white; padding: 2rem; border-radius: 12px;">
+                <div class="spinner"></div>
+                <p id="loadingText">Creando recurso...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/utils.js"></script>
+    <script src="js/moodle-api.js"></script>
+    <script src="js/gemini-api.js"></script>
+    
+    <script>
+        let selectedCourse = null;
+        let selectedSection = 0;
+        let courseSections = [];
+
+        // Inicializar
+        window.onload = async function() {
+            if (!moodleAPI.isConfigured()) {
+                Utils.showAlert('No hay configuración. Redirigiendo...', 'error');
+                setTimeout(() => Utils.navigateTo('index.html'), 2000);
+                return;
+            }
+
+            try {
+                // Cargar info del usuario
+                const userInfo = await moodleAPI.getSiteInfo();
+                document.getElementById('userName').textContent = userInfo.fullname;
+                document.getElementById('userInfo').style.display = 'flex';
+
+                // Cargar materias
+                await loadCourses();
+            } catch (error) {
+                Utils.showAlert('Error al inicializar: ' + error.message, 'error');
+            }
+        };
+
+        async function loadCourses() {
+            try {
+                const courses = await moodleAPI.getCourses();
+                const select = document.getElementById('courseSelect');
+                select.innerHTML = '<option value="">-- Seleccioná una materia --</option>';
+                
+                courses.forEach(course => {
+                    const option = document.createElement('option');
+                    option.value = course.id;
+                    option.textContent = course.fullname;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                Utils.showAlert('Error cargando materias: ' + error.message, 'error');
+            }
+        }
+
+        async function loadCourseSections() {
+            const courseId = document.getElementById('courseSelect').value;
+            
+            if (!courseId) {
+                document.getElementById('sectionSelectorContainer').style.display = 'none';
+                document.getElementById('resourceTypeSelector').style.display = 'none';
+                return;
+            }
+
+            selectedCourse = parseInt(courseId);
+
+            try {
+                Utils.showLoading('Cargando secciones...');
+                const sections = await moodleAPI.getCourseContents(courseId);
+                courseSections = sections;
+
+                const selectorDiv = document.getElementById('sectionSelector');
+                selectorDiv.innerHTML = '';
+
+                sections.forEach((section, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'section-btn';
+                    btn.textContent = section.name || `Sección ${index}`;
+                    btn.onclick = () => selectSection(index);
+                    if (index === 0) btn.classList.add('active');
+                    selectorDiv.appendChild(btn);
+                });
+
+                selectedSection = 0;
+                document.getElementById('sectionSelectorContainer').style.display = 'block';
+                document.getElementById('resourceTypeSelector').style.display = 'block';
+                
+                Utils.hideLoading();
+            } catch (error) {
+                Utils.hideLoading();
+                Utils.showAlert('Error cargando secciones: ' + error.message, 'error');
+            }
+        }
+
+        function selectSection(index) {
+            selectedSection = index;
+            document.querySelectorAll('.section-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === index);
+            });
+        }
+
+        function selectResourceType(type) {
+            // Ocultar todos los formularios
+            document.querySelectorAll('[id^="form-"]').forEach(form => {
+                form.classList.add('hidden');
+            });
+
+            // Resaltar el tipo seleccionado
+            document.querySelectorAll('.resource-type-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            // Mostrar el formulario correspondiente
+            document.getElementById(`form-${type}`).classList.remove('hidden');
+
+            // Scroll al formulario
+            document.getElementById(`form-${type}`).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            document.querySelectorAll('[id^="form-"]').forEach(form => {
+                form.classList.add('hidden');
+            });
+            document.querySelectorAll('.resource-type-card').forEach(card => {
+                card.classList.remove('active');
+            });
+        }
+
+        async function generateWithAI(fieldId, prompt) {
+            const field = document.getElementById(fieldId);
+            const button = event.currentTarget;
+            
+            button.disabled = true;
+            button.textContent = '⏳ Generando...';
+
+            try {
+                const content = await geminiAPI.generateText(prompt);
+                field.value = content;
+                Utils.showAlert('✨ Contenido generado con IA', 'success');
+            } catch (error) {
+                Utils.showAlert('Error generando contenido: ' + error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '✨ Generar con IA';
+            }
+        }
+
+        async function improveWithAI(fieldId) {
+            const field = document.getElementById(fieldId);
+            const currentText = field.value;
+
+            if (!currentText.trim()) {
+                Utils.showAlert('No hay texto para mejorar', 'warning');
+                return;
+            }
+
+            const button = event.currentTarget;
+            button.disabled = true;
+            button.textContent = '⏳ Mejorando...';
+
+            try {
+                const improvedText = await geminiAPI.generateText(
+                    `Mejorá el siguiente texto para que sea más claro, profesional y académico. Mantené el sentido original pero mejorá la redacción:\n\n${currentText}`
+                );
+                field.value = improvedText;
+                Utils.showAlert('✨ Texto mejorado', 'success');
+            } catch (error) {
+                Utils.showAlert('Error mejorando texto: ' + error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '🔧 Mejorar texto';
+            }
+        }
+
+        async function generatePageContentWithAI() {
+            const title = document.getElementById('page-name').value;
+            const intro = document.getElementById('page-intro').value;
+
+            if (!title) {
+                Utils.showAlert('Primero ingresá un título para la página', 'warning');
+                return;
+            }
+
+            const button = event.currentTarget;
+            button.disabled = true;
+            button.textContent = '⏳ Generando contenido...';
+
+            try {
+                const prompt = `Genera contenido educativo completo en formato HTML para una página de Moodle. 
+                
+Título: ${title}
+${intro ? `Contexto: ${intro}` : ''}
+
+El contenido debe:
+- Ser académico y educativo
+- Incluir secciones con encabezados <h3>
+- Usar listas, párrafos y formateo HTML apropiado
+- Ser comprehensivo (mínimo 400 palabras)
+- Incluir ejemplos si es pertinente
+
+Generá solo el contenido HTML, sin explicaciones adicionales.`;
+
+                const content = await geminiAPI.generateText(prompt);
+                document.getElementById('page-content').value = content;
+                Utils.showAlert('✨ Contenido completo generado', 'success');
+            } catch (error) {
+                Utils.showAlert('Error generando contenido: ' + error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '✨ Generar contenido completo';
+            }
+        }
+
+        async function generateForumIntroWithAI() {
+            const name = document.getElementById('forum-name').value;
+            const type = document.getElementById('forum-type').value;
+
+            if (!name) {
+                Utils.showAlert('Primero ingresá un nombre para el foro', 'warning');
+                return;
+            }
+
+            const button = event.currentTarget;
+            button.disabled = true;
+            button.textContent = '⏳ Generando...';
+
+            try {
+                const typeDescriptions = {
+                    'general': 'discusión abierta y general',
+                    'single': 'una única discusión enfocada',
+                    'eachuser': 'donde cada estudiante inicia su propia discusión',
+                    'qanda': 'de preguntas y respuestas',
+                    'blog': 'estilo blog'
+                };
+
+                const prompt = `Generá una descripción invitadora y clara para un foro de ${typeDescriptions[type]} llamado "${name}". 
+                
+La descripción debe:
+- Explicar el propósito del foro
+- Motivar a los estudiantes a participar
+- Dar pautas básicas de uso
+- Ser breve pero completa (100-150 palabras)`;
+
+                const intro = await geminiAPI.generateText(prompt);
+                document.getElementById('forum-intro').value = intro;
+                Utils.showAlert('✨ Descripción generada', 'success');
+            } catch (error) {
+                Utils.showAlert('Error generando descripción: ' + error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '✨ Generar descripción';
+            }
+        }
+
+        async function generateAssignmentWithAI() {
+            const name = document.getElementById('assignment-name').value;
+
+            if (!name) {
+                Utils.showAlert('Primero ingresá un nombre para la tarea', 'warning');
+                return;
+            }
+
+            const button = event.currentTarget;
+            button.disabled = true;
+            button.textContent = '⏳ Generando consigna...';
+
+            try {
+                const prompt = `Generá una consigna completa para una tarea académica universitaria llamada "${name}".
+
+La consigna debe incluir:
+- Objetivo de la tarea
+- Instrucciones claras y detalladas
+- Requisitos específicos (extensión, formato, etc.)
+- Criterios de evaluación
+- Formato HTML con estructura clara
+
+Extensión: 200-300 palabras`;
+
+                const intro = await geminiAPI.generateText(prompt);
+                document.getElementById('assignment-intro').value = intro;
+                Utils.showAlert('✨ Consigna generada', 'success');
+            } catch (error) {
+                Utils.showAlert('Error generando consigna: ' + error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '✨ Generar consigna completa';
+            }
+        }
+
+        async function createResource(type) {
+            if (!selectedCourse) {
+                Utils.showAlert('Seleccioná una materia', 'error');
+                return;
+            }
+
+            // Validar campos según tipo
+            let isValid = false;
+            let resourceData = {};
+
+            switch(type) {
+                case 'label':
+                    const labelName = document.getElementById('label-name').value;
+                    const labelIntro = document.getElementById('label-intro').value;
+                    if (labelName && labelIntro) {
+                        resourceData = { name: labelName, intro: labelIntro };
+                        isValid = true;
+                    }
+                    break;
+
+                case 'url':
+                    const urlName = document.getElementById('url-name').value;
+                    const urlExternal = document.getElementById('url-externalurl').value;
+                    const urlIntro = document.getElementById('url-intro').value;
+                    if (urlName && urlExternal && urlIntro) {
+                        resourceData = { name: urlName, externalurl: urlExternal, intro: urlIntro };
+                        isValid = true;
+                    }
+                    break;
+
+                case 'page':
+                    const pageName = document.getElementById('page-name').value;
+                    const pageIntro = document.getElementById('page-intro').value;
+                    const pageContent = document.getElementById('page-content').value;
+                    if (pageName && pageIntro && pageContent) {
+                        resourceData = { name: pageName, intro: pageIntro, content: pageContent };
+                        isValid = true;
+                    }
+                    break;
+
+                case 'forum':
+                    const forumName = document.getElementById('forum-name').value;
+                    const forumIntro = document.getElementById('forum-intro').value;
+                    const forumType = document.getElementById('forum-type').value;
+                    if (forumName && forumIntro) {
+                        resourceData = { name: forumName, intro: forumIntro, forumtype: forumType };
+                        isValid = true;
+                    }
+                    break;
+
+                case 'assignment':
+                    const assignName = document.getElementById('assignment-name').value;
+                    const assignIntro = document.getElementById('assignment-intro').value;
+                    const assignDuedate = document.getElementById('assignment-duedate').value;
+                    const assignFromdate = document.getElementById('assignment-allowsubmissionsfromdate').value;
+                    if (assignName && assignIntro) {
+                        resourceData = { 
+                            name: assignName, 
+                            intro: assignIntro,
+                            duedate: assignDuedate ? Math.floor(new Date(assignDuedate).getTime() / 1000) : null,
+                            allowsubmissionsfromdate: assignFromdate ? Math.floor(new Date(assignFromdate).getTime() / 1000) : null
+                        };
+                        isValid = true;
+                    }
+                    break;
+            }
+
+            if (!isValid) {
+                Utils.showAlert('Por favor completá todos los campos requeridos', 'warning');
+                return;
+            }
+
+            // Mostrar loading
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            document.getElementById('loadingText').textContent = `Creando ${type}...`;
+
+            try {
+                let result;
+
+                switch(type) {
+                    case 'label':
+                        result = await moodleAPI.createLabel(selectedCourse, selectedSection, resourceData.name, resourceData.intro);
+                        break;
+                    case 'url':
+                        result = await moodleAPI.createUrl(selectedCourse, selectedSection, resourceData.name, resourceData.intro, resourceData.externalurl);
+                        break;
+                    case 'page':
+                        result = await moodleAPI.createPage(selectedCourse, selectedSection, resourceData.name, resourceData.intro, resourceData.content);
+                        break;
+                    case 'forum':
+                        result = await moodleAPI.createForum(selectedCourse, selectedSection, resourceData.name, resourceData.intro, resourceData.forumtype);
+                        break;
+                    case 'assignment':
+                        result = await moodleAPI.createAssignment(selectedCourse, selectedSection, resourceData.name, resourceData.intro, resourceData.duedate, resourceData.allowsubmissionsfromdate);
+                        break;
+                }
+
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                Utils.showAlert(`✅ Recurso creado exitosamente en Moodle`, 'success');
+
+                // Limpiar formulario
+                document.getElementById(`form-${type}`).querySelectorAll('input, textarea').forEach(field => {
+                    field.value = '';
+                });
+
+                // Recargar secciones
+                await loadCourseSections();
+
+            } catch (error) {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                Utils.showAlert(`Error creando recurso: ${error.message}`, 'error');
+                console.error('Error detallado:', error);
+            }
+        }
+    </script>
+</body>
+</html>

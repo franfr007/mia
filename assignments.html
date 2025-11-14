@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIANOIA - Gestión de Tareas</title>
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Librerías para procesar documentos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="navbar-brand">
+                <img src="dianoia_logo.jpg" alt="DIANOIA" class="navbar-logo">
+                <h1>DIANOIA - Tareas</h1>
+            </div>
+            <div class="navbar-info">
+                <div class="user-badge">
+                    <span>👤</span>
+                    <span id="userName">Cargando...</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTAINER -->
+    <div class="container">
+        
+        <!-- BOTONES DE NAVEGACIÓN -->
+        <div class="flex gap-2 mb-2">
+            <button class="btn btn-secondary" onclick="Utils.navigateTo('index.html')">
+                ← Volver a materias
+            </button>
+            <button class="btn btn-secondary" id="backToCourseBtn" style="display: none;">
+                ← Volver al curso
+            </button>
+        </div>
+
+        <!-- HEADER DEL CURSO -->
+        <div class="card mb-3" id="courseHeader">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title" id="courseTitle">Cargando...</h2>
+                    <p style="color: var(--gray); margin-top: 0.5rem;" id="courseBreadcrumb"></p>
+                </div>
+                <button class="btn btn-outline" onclick="recargarDatos()">
+                    🔄 Recargar
+                </button>
+            </div>
+        </div>
+
+        <!-- VISTA: LISTA DE TAREAS -->
+        <div id="assignmentsListView">
+            
+            <!-- ESTADÍSTICAS -->
+            <div class="stats-grid mb-3">
+                <div class="stat-card">
+                    <h3>📝 Total de tareas</h3>
+                    <div class="number" id="statTotalAssignments">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>⏳ Entregas pendientes</h3>
+                    <div class="number" id="statPendingSubmissions">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>✅ Entregas corregidas</h3>
+                    <div class="number" id="statGradedSubmissions">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>📊 Promedio general</h3>
+                    <div class="number" id="statAverageGrade">-</div>
+                </div>
+            </div>
+
+            <!-- LISTA DE TAREAS -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Tareas del curso</h3>
+                </div>
+                <div id="assignmentsList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Cargando tareas...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA: ENTREGAS DE UNA TAREA -->
+        <div id="submissionsView" class="hidden">
+            
+            <!-- INFO DE LA TAREA -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h3 class="card-title" id="assignmentTitle">Tarea</h3>
+                </div>
+                <div id="assignmentInfo"></div>
+            </div>
+
+            <!-- FILTROS -->
+            <div class="card mb-3">
+                <div class="flex-between" style="flex-wrap: wrap; gap: 1rem;">
+                    <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
+                        <input 
+                            type="text" 
+                            id="searchSubmissions" 
+                            class="form-control" 
+                            placeholder="🔍 Buscar estudiante..."
+                            onkeyup="filtrarEntregas()"
+                        >
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <select id="filterStatus" class="form-control" onchange="filtrarEntregas()">
+                            <option value="all">Todas las entregas</option>
+                            <option value="pending">Pendientes de corregir</option>
+                            <option value="graded">Ya corregidas</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <select id="sortSubmissions" class="form-control" onchange="ordenarEntregas()">
+                            <option value="lastname">Ordenar por apellido</option>
+                            <option value="date">Por fecha de entrega</option>
+                            <option value="grade">Por calificación</option>
+                            <option value="attempt">Por intento</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACCIONES MASIVAS -->
+            <div class="card mb-3">
+                <div class="flex gap-2">
+                    <button class="btn btn-primary" onclick="corregirTodasConIA()">
+                        🤖 Corregir todas las pendientes con IA
+                    </button>
+                    <button class="btn btn-outline" onclick="exportarCalificaciones()">
+                        📊 Exportar calificaciones
+                    </button>
+                    <button class="btn btn-warning" onclick="enviarRecordatorios()">
+                        📧 Enviar recordatorios
+                    </button>
+                </div>
+            </div>
+
+            <!-- LISTA DE ENTREGAS -->
+            <div id="submissionsList"></div>
+        </div>
+
+    </div>
+
+    <!-- MODAL DE CORRECCIÓN -->
+    <div id="correctionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Corrección con IA</h2>
+                <span class="close-modal" onclick="closeModal()">×</span>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/utils.js"></script>
+    <script src="js/moodle-api.js"></script>
+    <script src="js/gemini-api.js"></script>
+    
+    <script>
+        let currentCourse = null;
+        let currentAssignment = null;
+        let allAssignments = [];
+        let allSubmissions = [];
+        let filteredSubmissions = [];
+        let viewMode = 'list'; // 'list' o 'submissions'
+
+        // Inicializar
+        window.onload = async function() {
+            if (!moodleAPI.isConfigured()) {
+                Utils.showAlert('No estás conectado. Redirigiendo...', 'warning');
+                setTimeout(() => Utils.navigateTo('index.html'), 2000);
+                return;
+            }
+
+            const params = Utils.getUrlParams();
+            const courseId = params.courseId;
+
+            if (!courseId) {
+                Utils.showAlert('No se especificó un curso', 'error');
+                setTimeout(() => Utils.navigateTo('index.html'), 2000);
+                return;
+            }
+
+            const userInfo = await moodleAPI.getSiteInfo();
+            document.getElementById('userName').textContent = userInfo.fullname;
+
+            await cargarCurso(courseId);
+
+            // Si se especificó una tarea, ir directo a sus entregas
+            if (params.assignmentId) {
+                const assignment = allAssignments.find(a => a.id == params.assignmentId);
+                if (assignment) {
+                    await verEntregas(assignment);
+                }
+            }
+        };
+
+        // Cargar curso y sus tareas
+        async function cargarCurso(courseId) {
+            try {
+                Utils.showLoading('Cargando tareas...');
+
+                const courses = await moodleAPI.getCourses();
+                currentCourse = courses.find(c => c.id == courseId);
+
+                if (!currentCourse) {
+                    throw new Error('Curso no encontrado');
+                }
+
+                document.getElementById('courseTitle').textContent = currentCourse.fullname;
+                document.getElementById('courseBreadcrumb').textContent = currentCourse.shortname;
+                document.getElementById('backToCourseBtn').style.display = 'block';
+                document.getElementById('backToCourseBtn').onclick = () => Utils.navigateTo('course-detail.html', { id: courseId });
+
+                const assignmentsData = await moodleAPI.getAssignments([courseId]);
+                allAssignments = assignmentsData.courses?.[0]?.assignments || [];
+
+                await cargarEstadisticas();
+                mostrarTareas();
+
+                Utils.hideLoading();
+
+            } catch (error) {
+                console.error('Error:', error);
+                Utils.showAlert(`Error al cargar el curso: ${error.message}`, 'error');
+                Utils.hideLoading();
+            }
+        }
+
+        // Cargar estadísticas generales
+        async function cargarEstadisticas() {
+            let totalPending = 0;
+            let totalGraded = 0;
+            let gradesSum = 0;
+            let gradesCount = 0;
+
+            for (const assignment of allAssignments) {
+                try {
+                    const submissions = await moodleAPI.getSubmissions([assignment.id]);
+                    const grades = await moodleAPI.getGrades([assignment.id]);
+
+                    if (submissions.assignments?.[0]) {
+                        const subs = submissions.assignments[0].submissions.filter(s => s.status === 'submitted');
+                        
+                        for (const sub of subs) {
+                            const userGrade = grades.assignments?.[0]?.grades?.find(g => g.userid === sub.userid);
+                            if (userGrade && userGrade.grade !== null && userGrade.grade >= 0) {
+                                totalGraded++;
+                                gradesSum += parseFloat(userGrade.grade);
+                                gradesCount++;
+                            } else {
+                                totalPending++;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error en estadísticas:', e);
+                }
+            }
+
+            document.getElementById('statTotalAssignments').textContent = allAssignments.length;
+            document.getElementById('statPendingSubmissions').textContent = totalPending;
+            document.getElementById('statGradedSubmissions').textContent = totalGraded;
+            document.getElementById('statAverageGrade').textContent = gradesCount > 0 
+                ? (gradesSum / gradesCount).toFixed(2) 
+                : '-';
+        }
+
+        // Mostrar lista de tareas
+        function mostrarTareas() {
+            const container = document.getElementById('assignmentsList');
+
+            if (allAssignments.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No hay tareas en este curso</div>';
+                return;
+            }
+
+            container.innerHTML = allAssignments.map(assignment => {
+                const dueDate = assignment.duedate 
+                    ? Utils.formatDate(assignment.duedate, 'medium')
+                    : 'Sin fecha límite';
+                
+                const now = Date.now() / 1000;
+                const isOverdue = assignment.duedate && assignment.duedate < now;
+                const dueBadge = isOverdue 
+                    ? '<span class="badge badge-danger">🚨 Vencida</span>'
+                    : '<span class="badge badge-success">✓ Activa</span>';
+
+                return `
+                    <div class="card mb-2">
+                        <div class="flex-between">
+                            <div style="flex: 1;">
+                                <h4 style="color: var(--dianoia-blue); margin-bottom: 0.5rem;">
+                                    ${assignment.name}
+                                </h4>
+                                <div style="color: var(--gray); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    📅 Fecha límite: ${dueDate} ${dueBadge}
+                                </div>
+                                <div style="color: var(--gray); font-size: 0.85rem;">
+                                    📊 Calificación máxima: ${assignment.grade || 10} puntos
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick='verEntregas(${JSON.stringify(assignment).replace(/'/g, "\\'")})'  style="white-space: nowrap;">
+                                Ver entregas →
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Ver entregas de una tarea
+        async function verEntregas(assignment) {
+            currentAssignment = assignment;
+            viewMode = 'submissions';
+
+            document.getElementById('assignmentsListView').classList.add('hidden');
+            document.getElementById('submissionsView').classList.remove('hidden');
+            document.getElementById('assignmentTitle').textContent = assignment.name;
+            document.getElementById('courseBreadcrumb').textContent = `${currentCourse.shortname} > ${assignment.name}`;
+
+            // Info de la tarea
+            document.getElementById('assignmentInfo').innerHTML = `
+                <div style="padding: 1rem;">
+                    <p style="color: var(--gray); margin-bottom: 0.5rem;">
+                        <strong>Fecha límite:</strong> ${assignment.duedate ? Utils.formatDate(assignment.duedate, 'full') : 'Sin fecha límite'}
+                    </p>
+                    <p style="color: var(--gray); margin-bottom: 0.5rem;">
+                        <strong>Calificación máxima:</strong> ${assignment.grade || 10} puntos
+                    </p>
+                    ${assignment.intro ? `<p style="color: var(--gray); border-left: 3px solid var(--dianoia-blue); padding-left: 1rem; margin-top: 1rem;">${assignment.intro}</p>` : ''}
+                </div>
+            `;
+
+            Utils.showLoading('Cargando entregas...');
+
+            try {
+                // Obtener entregas
+                const submissions = await moodleAPI.getSubmissions([assignment.id]);
+                const grades = await moodleAPI.getGrades([assignment.id]);
+                
+                allSubmissions = [];
+
+                if (submissions.assignments?.[0]) {
+                    const subs = submissions.assignments[0].submissions.filter(s => s.status === 'submitted');
+                    
+                    // Obtener nombres de estudiantes
+                    const userIds = [...new Set(subs.map(s => s.userid))];
+                    const users = await moodleAPI.getUsersByField('id', userIds);
+                    const usersMap = {};
+                    users.forEach(u => {
+                        usersMap[u.id] = `${u.lastname}, ${u.firstname}`;
+                    });
+
+                    // Combinar datos
+                    for (const sub of subs) {
+                        const userGrade = grades.assignments?.[0]?.grades?.find(g => g.userid === sub.userid);
+                        allSubmissions.push({
+                            ...sub,
+                            studentName: usersMap[sub.userid] || `Estudiante ${sub.userid}`,
+                            graded: userGrade && userGrade.grade !== null && userGrade.grade >= 0,
+                            gradeValue: userGrade?.grade,
+                            feedback: userGrade?.feedbackcomment || ''
+                        });
+                    }
+                }
+
+                filteredSubmissions = [...allSubmissions];
+                mostrarEntregas();
+                Utils.hideLoading();
+
+            } catch (error) {
+                console.error('Error:', error);
+                Utils.showAlert(`Error al cargar entregas: ${error.message}`, 'error');
+                Utils.hideLoading();
+            }
+        }
+
+        // Mostrar lista de entregas
+        function mostrarEntregas() {
+            const container = document.getElementById('submissionsList');
+
+            if (filteredSubmissions.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No hay entregas para esta tarea</div>';
+                return;
+            }
+
+            container.innerHTML = filteredSubmissions.map((sub, index) => {
+                const statusBadge = sub.graded
+                    ? `<span class="badge badge-success">✅ Corregida (${sub.gradeValue}/10)</span>`
+                    : `<span class="badge badge-warning">⏳ Pendiente</span>`;
+
+                return `
+                    <div class="card mb-2" data-submission-index="${index}">
+                        <div class="submission-header">
+                            <div>
+                                <div class="student-name">
+                                    ${sub.studentName}
+                                    ${statusBadge}
+                                </div>
+                                <div style="color: var(--gray); margin-top: 0.25rem;">
+                                    📅 Entregado: ${Utils.formatDate(sub.timemodified, 'full')}
+                                    ${sub.attemptnumber > 0 ? `| Intento ${sub.attemptnumber + 1}` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="submission-actions">
+                            <button class="btn btn-primary" onclick="corregirConIA(${index})">
+                                🤖 ${sub.graded ? 'Recorregir' : 'Corregir'} con IA
+                            </button>
+                            <button class="btn btn-outline" onclick="verDetalleEntrega(${index})">
+                                👁️ Ver detalle
+                            </button>
+                            ${sub.graded ? `<button class="btn btn-warning" onclick="editarCalificacion(${index})">✏️ Editar nota</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Filtrar entregas
+        function filtrarEntregas() {
+            const searchTerm = document.getElementById('searchSubmissions').value.toLowerCase();
+            const status = document.getElementById('filterStatus').value;
+
+            filteredSubmissions = allSubmissions.filter(sub => {
+                const matchSearch = sub.studentName.toLowerCase().includes(searchTerm);
+                const matchStatus = status === 'all' || 
+                    (status === 'pending' && !sub.graded) || 
+                    (status === 'graded' && sub.graded);
+                return matchSearch && matchStatus;
+            });
+
+            mostrarEntregas();
+        }
+
+        // Ordenar entregas
+        function ordenarEntregas() {
+            const sortBy = document.getElementById('sortSubmissions').value;
+            
+            filteredSubmissions.sort((a, b) => {
+                switch(sortBy) {
+                    case 'lastname':
+                        return a.studentName.localeCompare(b.studentName);
+                    case 'date':
+                        return b.timemodified - a.timemodified;
+                    case 'grade':
+                        return (b.gradeValue || -1) - (a.gradeValue || -1);
+                    case 'attempt':
+                        return (b.attemptnumber || 0) - (a.attemptnumber || 0);
+                    default:
+                        return 0;
+                }
+            });
+
+            mostrarEntregas();
+        }
+
+        // Variable global para guardar la entrega actual
+        let currentSubmissionForCorrection = null;
+        let materiaSeleccionada = 'general'; // Nueva variable para guardar la materia
+
+        // Función para extraer solo el primer nombre del estudiante
+        function extraerPrimerNombre(nombreCompleto) {
+            if (!nombreCompleto) return '';
+            
+            // El formato típico es "APELLIDO, NOMBRE1 NOMBRE2"
+            // Separar por coma para obtener la parte de los nombres
+            const partes = nombreCompleto.split(',');
+            
+            if (partes.length > 1) {
+                // Obtener la parte después de la coma y limpiar espacios
+                const nombres = partes[1].trim();
+                // Si hay múltiples nombres, tomar solo el primero
+                const primerNombre = nombres.split(' ')[0];
+                return primerNombre;
+            }
+            
+            // Si no hay coma, intentar obtener el primer nombre de otra forma
+            return nombreCompleto.split(' ')[0];
+        }
+
+        // Corregir con IA
+        async function corregirConIA(submissionIndex) {
+            // Obtener la submission desde filteredSubmissions usando el índice
+            const submission = filteredSubmissions[submissionIndex];
+            if (!submission) {
+                Utils.showAlert('Error: No se encontró la entrega', 'error');
+                return;
+            }
+            
+            // Guardar en variable global
+            currentSubmissionForCorrection = submission;
+            
+            // Primero mostrar selector de materia
+            openModal(`Corregir trabajo de ${submission.studentName}`);
+            document.getElementById('modalBody').innerHTML = `
+                <div class="form-group">
+                    <label>Selecciona el área de la materia para personalizar el feedback:</label>
+                    <select id="materiaSelector" class="form-control">
+                        <option value="general">General (sin especialización)</option>
+                        <option value="antropologia">Antropología Filosófica</option>
+                        <option value="antigua">Historia de la Filosofía Antigua</option>
+                        <option value="contemporanea">Filosofía Contemporánea</option>
+                        <option value="etica">Ética</option>
+                        <option value="metodologia">Metodología de la Investigación</option>
+                        <option value="logica">Lógica Formal</option>
+                    </select>
+                    <small>El prompt de IA se ajustará según el área seleccionada</small>
+                </div>
+                <div class="flex gap-2 mt-2">
+                    <button class="btn btn-primary" onclick="procesarCorreccion()">
+                        🤖 Continuar con corrección
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeModal()">
+                        Cancelar
+                    </button>
+                </div>
+            `;
+        }
+
+        // Procesar corrección con materia seleccionada
+        async function procesarCorreccion() {
+            const submission = currentSubmissionForCorrection;
+            materiaSeleccionada = document.getElementById('materiaSelector').value; // Guardar la materia
+            
+            document.getElementById('modalBody').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Extrayendo contenido del trabajo...</p>
+                </div>
+            `;
+
+            try {
+                let content = '';
+                let hasFile = false;
+                
+                // 1. Intentar obtener texto en línea
+                if (submission.plugins) {
+                    for (const plugin of submission.plugins) {
+                        if (plugin.type === 'onlinetext' && plugin.editorfields) {
+                            const text = plugin.editorfields[0]?.text || '';
+                            if (text && text.length > 50) {
+                                content = stripHtml(text);
+                            }
+                        }
+                        
+                        // 2. Buscar archivos adjuntos
+                        if (plugin.type === 'file' && plugin.fileareas) {
+                            for (const filearea of plugin.fileareas) {
+                                if (filearea.files && filearea.files.length > 0) {
+                                    hasFile = true;
+                                    const file = filearea.files[0];
+                                    
+                                    document.getElementById('modalBody').innerHTML = `
+                                        <div class="loading">
+                                            <div class="spinner"></div>
+                                            <p>Descargando archivo: ${file.filename}...</p>
+                                        </div>
+                                    `;
+                                    
+                                    // Descargar y procesar archivo
+                                    const fileContent = await descargarYProcesarArchivo(file.fileurl);
+                                    if (fileContent && fileContent.length > content.length) {
+                                        content = fileContent;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Validar que tenemos contenido
+                if (!content || content.length < 50) {
+                    throw new Error('No se pudo extraer suficiente contenido del trabajo. Asegúrate de que el estudiante haya entregado texto o un archivo válido.');
+                }
+
+                document.getElementById('modalBody').innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Analizando trabajo con IA (${content.length} caracteres)...</p>
+                        <p style="margin-top: 0.5rem; color: var(--gray);">Área: ${document.getElementById('materiaSelector')?.options[document.getElementById('materiaSelector')?.selectedIndex]?.text || 'General'}</p>
+                    </div>
+                `;
+
+                // Analizar con IA usando la materia específica y el nombre del estudiante
+                const primerNombre = extraerPrimerNombre(submission.studentName);
+                const feedback = await geminiAPI.analizarTrabajo(
+                    content,
+                    currentCourse.fullname,
+                    currentAssignment.intro || '',
+                    materiaSeleccionada,
+                    primerNombre // Pasar solo el primer nombre del estudiante
+                );
+
+                mostrarResultadoCorreccion(submission, feedback);
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('modalBody').innerHTML = `
+                    <div class="alert alert-error">
+                        ${error.message}
+                    </div>
+                    <button class="btn btn-secondary mt-2" onclick="closeModal()">Cerrar</button>
+                `;
+            }
+        }
+
+        // Descargar y procesar archivo
+        async function descargarYProcesarArchivo(fileUrl) {
+            try {
+                // Agregar token a la URL
+                const url = `${fileUrl}?token=${moodleAPI.config.token}`;
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('No se pudo descargar el archivo');
+                }
+
+                const blob = await response.blob();
+                const filename = fileUrl.split('/').pop().toLowerCase();
+
+                // Determinar tipo de archivo y extraer texto
+                if (filename.endsWith('.pdf')) {
+                    return await extraerTextoDePDF(blob);
+                } else if (filename.endsWith('.doc') || filename.endsWith('.docx')) {
+                    return await extraerTextoDeWord(blob);
+                } else if (filename.endsWith('.txt')) {
+                    return await blob.text();
+                } else {
+                    throw new Error(`Tipo de archivo no soportado: ${filename}`);
+                }
+            } catch (error) {
+                console.error('Error procesando archivo:', error);
+                throw new Error(`Error al procesar el archivo: ${error.message}`);
+            }
+        }
+
+        // Extraer texto de PDF
+        async function extraerTextoDePDF(blob) {
+            try {
+                const arrayBuffer = await blob.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = '';
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n\n';
+                }
+
+                return fullText.trim();
+            } catch (error) {
+                console.error('Error extrayendo texto de PDF:', error);
+                throw new Error('No se pudo extraer texto del PDF. Puede estar protegido o ser una imagen.');
+            }
+        }
+
+        // Extraer texto de Word
+        async function extraerTextoDeWord(blob) {
+            try {
+                const arrayBuffer = await blob.arrayBuffer();
+                const result = await mammoth.extractRawText({ arrayBuffer });
+                return result.value;
+            } catch (error) {
+                console.error('Error extrayendo texto de Word:', error);
+                throw new Error('No se pudo extraer texto del archivo Word.');
+            }
+        }
+
+        // Limpiar HTML de texto
+        function stripHtml(html) {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            return tmp.textContent || tmp.innerText || '';
+        }
+
+        // Mostrar resultado de corrección
+        function mostrarResultadoCorreccion(submission, feedback) {
+            // Obtener el nombre legible de la materia
+            const materiasMap = {
+                'general': 'General (sin especialización)',
+                'antropologia': 'Antropología Filosófica',
+                'antigua': 'Historia de la Filosofía Antigua',
+                'contemporanea': 'Filosofía Contemporánea',
+                'etica': 'Ética',
+                'metodologia': 'Metodología de la Investigación',
+                'logica': 'Lógica Formal'
+            };
+            
+            const nombreMateria = materiasMap[materiaSeleccionada] || 'General';
+            
+            document.getElementById('modalBody').innerHTML = `
+                <div class="alert alert-success mb-3">
+                    ✅ Análisis completado con IA
+                    <br>
+                    <small style="color: var(--gray);">📚 Área utilizada: <strong>${nombreMateria}</strong></small>
+                </div>
+
+                <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; max-height: 400px; overflow-y: auto; white-space: pre-wrap; line-height: 1.8;">
+${feedback}
+                </div>
+
+                <div class="form-group">
+                    <label>Calificación (0-${currentAssignment.grade || 10}):</label>
+                    <input type="number" id="gradeInput" class="form-control" min="0" max="${currentAssignment.grade || 10}" step="0.5" placeholder="Ej: 7.5">
+                </div>
+
+                <div class="form-group">
+                    <label>Feedback para el estudiante:</label>
+                    <textarea id="feedbackInput" class="form-control" rows="6" style="resize: vertical;">${feedback}</textarea>
+                    <small>Puedes editar el feedback generado por la IA antes de enviarlo</small>
+                </div>
+
+                <div class="flex gap-2">
+                    <button class="btn btn-success" onclick="guardarCalificacion()">
+                        💾 Guardar calificación
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeModal()">
+                        Cancelar
+                    </button>
+                </div>
+            `;
+        }
+
+        // Guardar calificación
+        async function guardarCalificacion() {
+            // Usar la variable global en lugar de pasar como parámetro
+            const submission = currentSubmissionForCorrection;
+            if (!submission) {
+                Utils.showAlert('Error: No se encontró la información de la entrega', 'error');
+                return;
+            }
+            
+            const grade = parseFloat(document.getElementById('gradeInput').value);
+            const feedback = document.getElementById('feedbackInput').value;
+
+            if (isNaN(grade) || grade < 0 || grade > (currentAssignment.grade || 10)) {
+                Utils.showAlert(`La nota debe estar entre 0 y ${currentAssignment.grade || 10}`, 'warning');
+                return;
+            }
+
+            if (!feedback.trim()) {
+                Utils.showAlert('Debes proporcionar feedback', 'warning');
+                return;
+            }
+
+            Utils.showLoading('Guardando calificación...');
+
+            try {
+                // Validar attemptnumber: Moodle requiere que sea >= 0
+                // Si es -1 o undefined, usar 0
+                const attemptNumber = (submission.attemptnumber !== undefined && submission.attemptnumber >= 0) 
+                    ? submission.attemptnumber 
+                    : 0;
+
+                await moodleAPI.saveGrade(
+                    currentAssignment.id,
+                    submission.userid,
+                    grade,
+                    attemptNumber,
+                    feedback
+                );
+
+                Utils.hideLoading();
+                Utils.showAlert('Calificación guardada exitosamente', 'success');
+                closeModal();
+                
+                // Recargar entregas
+                await verEntregas(currentAssignment);
+
+            } catch (error) {
+                console.error('Error:', error);
+                Utils.hideLoading();
+                Utils.showAlert(`Error al guardar: ${error.message}`, 'error');
+            }
+        }
+
+        // Ver detalle de entrega
+        async function verDetalleEntrega(submissionIndex) {
+            // Obtener la submission desde filteredSubmissions usando el índice
+            const submission = filteredSubmissions[submissionIndex];
+            if (!submission) {
+                Utils.showAlert('Error: No se encontró la entrega', 'error');
+                return;
+            }
+            
+            openModal(`Detalle - ${submission.studentName}`);
+            document.getElementById('modalBody').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Cargando contenido del trabajo...</p>
+                </div>
+            `;
+
+            try {
+                let content = '<div class="alert alert-info">No se encontró contenido</div>';
+                let hasFiles = false;
+                
+                if (submission.plugins) {
+                    // Buscar texto en línea
+                    for (const plugin of submission.plugins) {
+                        if (plugin.type === 'onlinetext' && plugin.editorfields) {
+                            const text = plugin.editorfields[0]?.text;
+                            if (text && text.length > 0) {
+                                content = text;
+                            }
+                        }
+                        
+                        // Buscar archivos
+                        if (plugin.type === 'file' && plugin.fileareas) {
+                            for (const filearea of plugin.fileareas) {
+                                if (filearea.files && filearea.files.length > 0) {
+                                    hasFiles = true;
+                                    content = '<div class="alert alert-info">El estudiante entregó archivo(s). Lista de archivos:</div><ul>';
+                                    filearea.files.forEach(file => {
+                                        content += `<li><strong>${file.filename}</strong> (${Utils.formatBytes(file.filesize)})</li>`;
+                                    });
+                                    content += '</ul>';
+                                    
+                                    // Intentar mostrar vista previa del primer archivo
+                                    const firstFile = filearea.files[0];
+                                    const filename = firstFile.filename.toLowerCase();
+                                    
+                                    if (filename.endsWith('.pdf') || filename.endsWith('.doc') || filename.endsWith('.docx') || filename.endsWith('.txt')) {
+                                        content += '<div class="alert alert-info">Cargando vista previa...</div>';
+                                        
+                                        try {
+                                            const fileContent = await descargarYProcesarArchivo(firstFile.fileurl);
+                                            content += `<div style="background: #f9fafb; padding: 1rem; border-radius: 8px; max-height: 400px; overflow-y: auto; margin-top: 1rem; white-space: pre-wrap;">${Utils.truncate(fileContent, 2000)}</div>`;
+                                        } catch (e) {
+                                            content += `<div class="alert alert-warning">No se pudo cargar la vista previa del archivo</div>`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                document.getElementById('modalBody').innerHTML = `
+                    <div>
+                        <p><strong>Estudiante:</strong> ${submission.studentName}</p>
+                        <p><strong>Fecha:</strong> ${Utils.formatDate(submission.timemodified, 'full')}</p>
+                        <p><strong>Estado:</strong> ${submission.graded ? `Calificada (${submission.gradeValue}/10)` : 'Pendiente'}</p>
+                    </div>
+                    <hr>
+                    <h3>Contenido entregado:</h3>
+                    ${content}
+                    ${submission.feedback ? `<hr><h3>Feedback:</h3><p style="white-space: pre-wrap;">${submission.feedback}</p>` : ''}
+                    <button class="btn btn-secondary mt-2" onclick="closeModal()">Cerrar</button>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('modalBody').innerHTML = `
+                    <div class="alert alert-error">Error al cargar el detalle: ${error.message}</div>
+                    <button class="btn btn-secondary mt-2" onclick="closeModal()">Cerrar</button>
+                `;
+            }
+        }
+
+        // Editar calificación existente
+        function editarCalificacion(submissionIndex) {
+            // Obtener la submission desde filteredSubmissions usando el índice
+            const submission = filteredSubmissions[submissionIndex];
+            if (!submission) {
+                Utils.showAlert('Error: No se encontró la entrega', 'error');
+                return;
+            }
+            
+            // Guardar en variable global
+            currentSubmissionForCorrection = submission;
+            
+            openModal(`Editar calificación - ${submission.studentName}`, `
+                <div class="form-group">
+                    <label>Calificación (0-${currentAssignment.grade || 10}):</label>
+                    <input type="number" id="gradeInput" class="form-control" min="0" max="${currentAssignment.grade || 10}" step="0.5" value="${submission.gradeValue}">
+                </div>
+
+                <div class="form-group">
+                    <label>Feedback:</label>
+                    <textarea id="feedbackInput" class="form-control" rows="6" style="resize: vertical;">${submission.feedback || ''}</textarea>
+                </div>
+
+                <div class="flex gap-2">
+                    <button class="btn btn-success" onclick="guardarCalificacion()">
+                        💾 Actualizar calificación
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeModal()">
+                        Cancelar
+                    </button>
+                </div>
+            `);
+        }
+
+        // Corregir todas con IA
+        async function corregirTodasConIA() {
+            const pendientes = allSubmissions.filter(s => !s.graded);
+            
+            if (pendientes.length === 0) {
+                Utils.showAlert('No hay entregas pendientes', 'info');
+                return;
+            }
+
+            Utils.confirm(
+                `¿Corregir ${pendientes.length} entregas pendientes con IA? Esto puede tomar varios minutos.`,
+                async () => {
+                    Utils.showLoading(`Corrigiendo 0/${pendientes.length}...`);
+                    
+                    let corrected = 0;
+                    for (const sub of pendientes) {
+                        try {
+                            await corregirConIA(sub);
+                            corrected++;
+                            Utils.showLoading(`Corrigiendo ${corrected}/${pendientes.length}...`);
+                        } catch (error) {
+                            console.error('Error:', error);
+                        }
+                    }
+                    
+                    Utils.hideLoading();
+                    Utils.showAlert(`Se corrigieron ${corrected} entregas`, 'success');
+                    await verEntregas(currentAssignment);
+                }
+            );
+        }
+
+        // Exportar calificaciones
+        function exportarCalificaciones() {
+            const data = allSubmissions.map(sub => ({
+                'Estudiante': sub.studentName,
+                'Fecha de entrega': Utils.formatDate(sub.timemodified, 'full'),
+                'Calificación': sub.gradeValue || 'Pendiente',
+                'Estado': sub.graded ? 'Corregida' : 'Pendiente',
+                'Intento': sub.attemptnumber + 1
+            }));
+
+            Utils.exportToCSV(data, `${currentCourse.shortname}_${currentAssignment.name}_calificaciones.csv`);
+            Utils.showAlert('Calificaciones exportadas', 'success');
+        }
+
+        // Enviar recordatorios (placeholder)
+        function enviarRecordatorios() {
+            Utils.showAlert('Función en desarrollo: Enviar recordatorios por email', 'info');
+        }
+
+        // Recargar datos
+        async function recargarDatos() {
+            if (viewMode === 'list') {
+                await cargarCurso(currentCourse.id);
+            } else {
+                await verEntregas(currentAssignment);
+            }
+        }
+
+        // Funciones de modal
+        function openModal(title, body = '') {
+            document.getElementById('modalTitle').textContent = title;
+            if (body) {
+                document.getElementById('modalBody').innerHTML = body;
+            }
+            document.getElementById('correctionModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('correctionModal').classList.remove('show');
+        }
+    </script>
+</body>
+</html>

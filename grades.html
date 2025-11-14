@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIANOIA - Panel de Calificaciones</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .grades-container {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, var(--dianoia-blue) 0%, var(--dianoia-blue-dark) 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .summary-card.warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .summary-card.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .summary-card.info {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        }
+
+        .summary-number {
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+
+        .summary-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .course-grades-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .course-grade-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .course-grade-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .course-grade-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .course-grade-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .course-grade-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dianoia-blue);
+        }
+
+        .grade-progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .grade-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--dianoia-blue) 0%, #10b981 100%);
+            transition: width 0.5s ease;
+        }
+
+        .grade-progress-fill.low {
+            background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .grade-progress-fill.medium {
+            background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .grade-items-list {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .grade-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            border-left: 4px solid #e5e7eb;
+        }
+
+        .grade-item.passed {
+            border-left-color: #10b981;
+        }
+
+        .grade-item.failed {
+            border-left-color: #ef4444;
+        }
+
+        .grade-item.pending {
+            border-left-color: #f59e0b;
+        }
+
+        .grade-item-name {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .grade-item-value {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #1f2937;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 300px;
+            gap: 1rem;
+            padding: 1rem 0;
+        }
+
+        .bar-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .bar {
+            width: 100%;
+            background: linear-gradient(180deg, var(--dianoia-blue) 0%, var(--dianoia-blue-dark) 100%);
+            border-radius: 8px 8px 0 0;
+            transition: all 0.5s ease;
+            position: relative;
+            min-height: 20px;
+        }
+
+        .bar:hover {
+            opacity: 0.8;
+        }
+
+        .bar-value {
+            position: absolute;
+            top: -1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 0.9rem;
+        }
+
+        .bar-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-item {
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dianoia-blue);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-tab {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid #e5e7eb;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .filter-tab:hover {
+            border-color: var(--dianoia-blue);
+            color: var(--dianoia-blue);
+        }
+
+        .filter-tab.active {
+            background: var(--dianoia-blue);
+            color: white;
+            border-color: var(--dianoia-blue);
+        }
+
+        .export-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            
+            .course-grade-card {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar no-print">
+        <div class="navbar-content">
+            <div class="navbar-brand">
+                <img src="dianoia_logo.jpg" alt="DIANOIA" class="navbar-logo">
+                <h1>DIANOIA</h1>
+            </div>
+            <div class="navbar-info">
+                <div class="user-badge">
+                    <span>👤</span>
+                    <span id="userName">Cargando...</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTAINER -->
+    <div class="container">
+        
+        <!-- HEADER -->
+        <div class="flex-between mb-2 no-print">
+            <button class="btn btn-secondary" onclick="Utils.navigateTo('index.html')">
+                ← Volver al inicio
+            </button>
+            <div class="flex gap-1">
+                <button class="btn btn-outline export-btn" onclick="exportarPDF()">
+                    📄 Exportar PDF
+                </button>
+                <button class="btn btn-primary export-btn" onclick="window.print()">
+                    🖨️ Imprimir
+                </button>
+            </div>
+        </div>
+
+        <h2 class="mb-2">📊 Panel de Calificaciones</h2>
+
+        <!-- LOADING -->
+        <div id="loadingPanel">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Cargando calificaciones...</p>
+            </div>
+        </div>
+
+        <!-- GRADES CONTENT -->
+        <div id="gradesContent" style="display: none;" class="grades-container">
+            
+            <!-- SUMMARY CARDS -->
+            <div class="summary-cards" id="summaryCards"></div>
+
+            <!-- FILTER TABS -->
+            <div class="filter-tabs no-print">
+                <div class="filter-tab active" onclick="filtrarCursos('todos')">
+                    Todos los cursos
+                </div>
+                <div class="filter-tab" onclick="filtrarCursos('aprobados')">
+                    ✅ Aprobados
+                </div>
+                <div class="filter-tab" onclick="filtrarCursos('pendientes')">
+                    ⏳ En curso
+                </div>
+                <div class="filter-tab" onclick="filtrarCursos('bajos')">
+                    ⚠️ Notas bajas
+                </div>
+            </div>
+
+            <!-- CHARTS -->
+            <div class="chart-container">
+                <h3 class="chart-title">📈 Rendimiento por Materia</h3>
+                <div class="bar-chart" id="gradesChart"></div>
+                <div class="stats-grid" id="statsGrid"></div>
+            </div>
+
+            <!-- COURSE GRADES -->
+            <h3 style="margin-top: 2rem;">📚 Calificaciones por Materia</h3>
+            <div class="course-grades-grid" id="courseGradesGrid"></div>
+
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/utils.js"></script>
+    <script src="js/moodle-api.js"></script>
+    <script>
+        let currentUser = null;
+        let allGrades = [];
+        let currentFilter = 'todos';
+
+        // Inicializar
+        async function init() {
+            try {
+                currentUser = await moodleAPI.getCurrentUser();
+                document.getElementById('userName').textContent = currentUser.fullname;
+
+                await cargarCalificaciones();
+
+            } catch (error) {
+                console.error('Error inicializando:', error);
+                document.getElementById('loadingPanel').innerHTML = '<div class="alert alert-danger">Error al cargar calificaciones: ' + error.message + '</div>';
+            }
+        }
+
+        // Cargar calificaciones
+        async function cargarCalificaciones() {
+            try {
+                // Obtener overview de calificaciones
+                const overview = await moodleAPI.getCourseGradesOverview();
+                console.log('Overview:', overview);
+
+                if (!overview || !overview.grades) {
+                    throw new Error('No se pudieron obtener las calificaciones');
+                }
+
+                allGrades = overview.grades;
+
+                // Mostrar resumen
+                mostrarResumen();
+
+                // Mostrar gráfico
+                mostrarGrafico();
+
+                // Mostrar calificaciones por curso
+                mostrarCalificacionesPorCurso();
+
+                // Ocultar loading y mostrar contenido
+                document.getElementById('loadingPanel').style.display = 'none';
+                document.getElementById('gradesContent').style.display = 'block';
+
+            } catch (error) {
+                console.error('Error cargando calificaciones:', error);
+                document.getElementById('loadingPanel').innerHTML = '<div class="alert alert-danger">Error: ' + error.message + '</div>';
+            }
+        }
+
+        // Mostrar resumen
+        function mostrarResumen() {
+            const summaryContainer = document.getElementById('summaryCards');
+            
+            // Calcular estadísticas
+            const totalCourses = allGrades.length;
+            const passedCourses = allGrades.filter(g => parseFloat(g.grade) >= 6).length;
+            const avgGrade = allGrades.reduce((sum, g) => sum + parseFloat(g.grade || 0), 0) / totalCourses;
+            const highestGrade = Math.max(...allGrades.map(g => parseFloat(g.grade || 0)));
+
+            summaryContainer.innerHTML = `
+                <div class="summary-card">
+                    <div class="summary-label">PROMEDIO GENERAL</div>
+                    <div class="summary-number">${avgGrade.toFixed(2)}</div>
+                    <div class="summary-label">de 10</div>
+                </div>
+                <div class="summary-card success">
+                    <div class="summary-label">MATERIAS APROBADAS</div>
+                    <div class="summary-number">${passedCourses}</div>
+                    <div class="summary-label">de ${totalCourses}</div>
+                </div>
+                <div class="summary-card info">
+                    <div class="summary-label">MEJOR CALIFICACIÓN</div>
+                    <div class="summary-number">${highestGrade.toFixed(2)}</div>
+                    <div class="summary-label">Excelente</div>
+                </div>
+                <div class="summary-card ${avgGrade >= 7 ? 'success' : 'warning'}">
+                    <div class="summary-label">DESEMPEÑO</div>
+                    <div class="summary-number">${avgGrade >= 8 ? '🌟' : avgGrade >= 7 ? '👍' : '📚'}</div>
+                    <div class="summary-label">${avgGrade >= 8 ? 'Excelente' : avgGrade >= 7 ? 'Bueno' : 'Mejorable'}</div>
+                </div>
+            `;
+        }
+
+        // Mostrar gráfico
+        function mostrarGrafico() {
+            const chartContainer = document.getElementById('gradesChart');
+            const statsContainer = document.getElementById('statsGrid');
+            
+            // Ordenar por nota (mostrar top 5 y bottom 5)
+            const sorted = [...allGrades].sort((a, b) => parseFloat(b.grade) - parseFloat(a.grade));
+            const topCourses = sorted.slice(0, Math.min(5, sorted.length));
+            
+            const maxGrade = 10;
+            
+            chartContainer.innerHTML = topCourses.map(course => {
+                const grade = parseFloat(course.grade || 0);
+                const percentage = (grade / maxGrade) * 100;
+                const courseName = course.coursename.length > 20 ? course.coursename.substring(0, 20) + '...' : course.coursename;
+                
+                return `
+                    <div class="bar-item">
+                        <div class="bar" style="height: ${percentage}%">
+                            <div class="bar-value">${grade.toFixed(1)}</div>
+                        </div>
+                        <div class="bar-label">${courseName}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Estadísticas adicionales
+            const grades = allGrades.map(g => parseFloat(g.grade || 0));
+            const avg = grades.reduce((a, b) => a + b, 0) / grades.length;
+            const min = Math.min(...grades);
+            const max = Math.max(...grades);
+            const median = grades.sort((a, b) => a - b)[Math.floor(grades.length / 2)];
+
+            statsContainer.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${avg.toFixed(2)}</div>
+                    <div class="stat-label">Promedio</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${median.toFixed(2)}</div>
+                    <div class="stat-label">Mediana</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${min.toFixed(2)}</div>
+                    <div class="stat-label">Mínimo</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${max.toFixed(2)}</div>
+                    <div class="stat-label">Máximo</div>
+                </div>
+            `;
+        }
+
+        // Mostrar calificaciones por curso
+        function mostrarCalificacionesPorCurso() {
+            const container = document.getElementById('courseGradesGrid');
+            
+            let filteredGrades = allGrades;
+            
+            // Aplicar filtro
+            if (currentFilter === 'aprobados') {
+                filteredGrades = allGrades.filter(g => parseFloat(g.grade) >= 6);
+            } else if (currentFilter === 'pendientes') {
+                filteredGrades = allGrades.filter(g => parseFloat(g.grade) > 0 && parseFloat(g.grade) < 6);
+            } else if (currentFilter === 'bajos') {
+                filteredGrades = allGrades.filter(g => parseFloat(g.grade) < 7);
+            }
+
+            if (filteredGrades.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No hay calificaciones con este filtro</div>';
+                return;
+            }
+
+            container.innerHTML = filteredGrades.map(course => {
+                const grade = parseFloat(course.grade || 0);
+                const percentage = (grade / 10) * 100;
+                const status = grade >= 6 ? 'passed' : grade > 0 ? 'failed' : 'pending';
+                const progressClass = grade >= 7 ? '' : grade >= 6 ? 'medium' : 'low';
+                
+                return `
+                    <div class="course-grade-card">
+                        <div class="course-grade-header">
+                            <div style="flex: 1;">
+                                <h3 class="course-grade-title">${course.coursename}</h3>
+                                <span class="badge badge-${status === 'passed' ? 'success' : status === 'failed' ? 'danger' : 'warning'}">
+                                    ${status === 'passed' ? '✅ Aprobado' : status === 'failed' ? '❌ Desaprobado' : '⏳ Pendiente'}
+                                </span>
+                            </div>
+                            <div class="course-grade-value">${grade.toFixed(1)}</div>
+                        </div>
+                        
+                        <div class="grade-progress-bar">
+                            <div class="grade-progress-fill ${progressClass}" style="width: ${percentage}%"></div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                            <span>${percentage.toFixed(0)}% completado</span>
+                            <span>${grade >= 8 ? '🌟 Excelente' : grade >= 7 ? '👍 Muy bueno' : grade >= 6 ? '✔️ Bueno' : '📚 Necesita mejorar'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Filtrar cursos
+        function filtrarCursos(filtro) {
+            currentFilter = filtro;
+            
+            // Actualizar tabs
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            mostrarCalificacionesPorCurso();
+        }
+
+        // Exportar PDF
+        function exportarPDF() {
+            Utils.showAlert('Usa el botón Imprimir y selecciona "Guardar como PDF" en la ventana de impresión', 'info');
+        }
+
+        // Iniciar
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

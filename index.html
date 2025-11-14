@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIANOIA - Dashboard Docente</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="navbar-brand">
+                <img src="dianoia_logo.jpg" alt="DIANOIA" class="navbar-logo">
+                <h1>DIANOIA</h1>
+            </div>
+            <div class="navbar-info">
+                <button class="btn btn-outline" onclick="Utils.navigateTo('grades.html')" style="display: none; margin-right: 1rem;" id="gradesBtn">
+                    ðŸ“Š Calificaciones
+                </button>
+                <button class="btn btn-outline" onclick="Utils.navigateTo('messaging.html')" style="display: none; margin-right: 1rem;" id="messagingBtn">
+                    ðŸ’¬ Mensajes
+                </button>
+                <div class="user-badge" id="userInfo" style="display: none;">
+                    <span>ðŸ‘¤</span>
+                    <span id="userName">Cargando...</span>
+                </div>
+                <button class="btn btn-secondary" onclick="logout()" style="display: none;" id="logoutBtn">
+                    Cerrar sesiÃ³n
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTAINER PRINCIPAL -->
+    <div class="container">
+        
+        <!-- PANEL DE CONFIGURACIÃ“N -->
+        <div class="card" id="configPanel">
+            <div class="card-header">
+                <h2 class="card-title">ðŸ”§ ConfiguraciÃ³n de ConexiÃ³n</h2>
+            </div>
+            <div class="form-group">
+                <label>URL de Moodle:</label>
+                <input type="url" id="moodleUrl" class="form-control" placeholder="https://moodle.tuuniversidad.edu.ar">
+                <small>Ejemplo: https://moodle.usal.edu.ar (sin / al final)</small>
+            </div>
+            <div class="form-group">
+                <label>Token de API de Moodle:</label>
+                <input type="password" id="moodleToken" class="form-control" placeholder="Tu token de Moodle">
+                <small>ObtÃ©n tu token desde Moodle o contacta al administrador</small>
+            </div>
+            <div class="form-group">
+                <label>API Key de Gemini:</label>
+                <input type="password" id="geminiKey" class="form-control" placeholder="Tu API Key de Gemini">
+                <small>ObtÃ©n tu clave gratuita en: <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+            </div>
+            <button class="btn btn-primary" onclick="conectar()">
+                ðŸš€ Conectar con Moodle
+            </button>
+            <div id="configAlert" class="mt-2"></div>
+        </div>
+
+        <!-- PANEL DE ESTADÃSTICAS -->
+        <div id="statsPanel" class="hidden">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>ðŸ“š Materias activas</h3>
+                    <div class="number" id="totalCourses">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>ðŸ“ Entregas pendientes</h3>
+                    <div class="number" id="totalSubmissions">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>â“ Cuestionarios</h3>
+                    <div class="number" id="totalQuizzes">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>ðŸ’¬ Foros activos</h3>
+                    <div class="number" id="totalForums">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BARRA DE BÃšSQUEDA Y FILTROS -->
+        <div id="filtersPanel" class="card hidden" style="margin-bottom: 2rem;">
+            <div class="flex-between" style="flex-wrap: wrap; gap: 1rem;">
+                <div class="form-group" style="margin: 0; flex: 1; min-width: 250px;">
+                    <input 
+                        type="text" 
+                        id="searchCourses" 
+                        class="form-control" 
+                        placeholder="ðŸ” Buscar materia..."
+                        onkeyup="filtrarMaterias()"
+                    >
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <select id="sortCourses" class="form-control" onchange="ordenarMaterias()">
+                        <option value="name">Ordenar por nombre</option>
+                        <option value="recent">MÃ¡s recientes</option>
+                        <option value="oldest">MÃ¡s antiguas</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL DE MATERIAS -->
+        <div id="coursesPanel" class="hidden">
+            <div class="card-header">
+                <h2 class="card-title">ðŸ“š Mis Materias</h2>
+                <button class="btn btn-outline" onclick="recargarMaterias()">
+                    ðŸ”„ Recargar
+                </button>
+            </div>
+            <div class="grid grid-3" id="coursesGrid"></div>
+        </div>
+
+        <!-- PANEL DE CARGA -->
+        <div id="loadingPanel" class="hidden">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Cargando datos de Moodle...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/utils.js"></script>
+    <script src="js/moodle-api.js"></script>
+    <script src="js/gemini-api.js"></script>
+    
+    <script>
+        let allCourses = [];
+        let filteredCourses = [];
+
+        // Inicializar al cargar la pÃ¡gina
+        window.onload = async function() {
+            if (moodleAPI.isConfigured()) {
+                // Si ya estÃ¡ configurado, intentar conectar automÃ¡ticamente
+                document.getElementById('moodleUrl').value = moodleAPI.config.url;
+                document.getElementById('moodleToken').value = moodleAPI.config.token;
+                document.getElementById('geminiKey').value = moodleAPI.config.geminiKey;
+                
+                await conectar();
+            }
+        };
+
+        // FunciÃ³n para conectar con Moodle
+        async function conectar() {
+            const url = document.getElementById('moodleUrl').value.trim();
+            const token = document.getElementById('moodleToken').value.trim();
+            const geminiKey = document.getElementById('geminiKey').value.trim();
+
+            // Validar campos
+            if (!url || !token || !geminiKey) {
+                Utils.showAlert('Por favor completa todos los campos', 'error');
+                return;
+            }
+
+            if (!Utils.validateUrl(url)) {
+                Utils.showAlert('URL de Moodle no vÃ¡lida', 'error');
+                return;
+            }
+
+            // Guardar configuraciÃ³n
+            moodleAPI.saveConfig(url, token, geminiKey);
+            geminiAPI.setApiKey(geminiKey);
+
+            // Mostrar loading
+            document.getElementById('loadingPanel').classList.remove('hidden');
+            document.getElementById('configPanel').classList.add('hidden');
+
+            try {
+                // Obtener informaciÃ³n del usuario
+                const userInfo = await moodleAPI.getSiteInfo();
+                document.getElementById('userName').textContent = userInfo.fullname;
+                document.getElementById('userInfo').style.display = 'flex';
+                document.getElementById('resourcesBtn').style.display = 'block';
+                document.getElementById('gradesBtn').style.display = 'block';
+                document.getElementById('messagingBtn').style.display = 'block';
+                document.getElementById('logoutBtn').style.display = 'block';
+
+                // Cargar materias
+                await cargarMaterias();
+
+                // Ocultar loading y mostrar dashboard
+                document.getElementById('loadingPanel').classList.add('hidden');
+                document.getElementById('statsPanel').classList.remove('hidden');
+                document.getElementById('filtersPanel').classList.remove('hidden');
+                document.getElementById('coursesPanel').classList.remove('hidden');
+
+                Utils.showAlert('âœ… ConexiÃ³n exitosa con Moodle', 'success');
+
+            } catch (error) {
+                console.error('Error:', error);
+                Utils.showAlert(`Error al conectar: ${error.message}`, 'error');
+                document.getElementById('loadingPanel').classList.add('hidden');
+                document.getElementById('configPanel').classList.remove('hidden');
+            }
+        }
+
+        // Cargar materias del usuario
+        async function cargarMaterias() {
+            try {
+                allCourses = await moodleAPI.getCourses();
+                filteredCourses = [...allCourses];
+
+                // Actualizar estadÃ­sticas
+                document.getElementById('totalCourses').textContent = allCourses.length;
+
+                // Cargar estadÃ­sticas adicionales (en paralelo)
+                cargarEstadisticasGenerales();
+
+                // Mostrar materias
+                mostrarMaterias(filteredCourses);
+
+            } catch (error) {
+                console.error('Error cargando materias:', error);
+                Utils.showAlert('Error al cargar materias', 'error');
+            }
+        }
+
+        // Cargar estadÃ­sticas generales
+        async function cargarEstadisticasGenerales() {
+            try {
+                const courseIds = allCourses.map(c => c.id);
+                
+                // Cargar tareas
+                const assignmentsData = await moodleAPI.getAssignments(courseIds);
+                let totalSubmissions = 0;
+                
+                if (assignmentsData.courses) {
+                    for (const course of assignmentsData.courses) {
+                        for (const assignment of course.assignments) {
+                            const submissions = await moodleAPI.getSubmissions([assignment.id]);
+                            if (submissions.assignments && submissions.assignments[0]) {
+                                totalSubmissions += submissions.assignments[0].submissions.filter(s => s.status === 'submitted').length;
+                            }
+                        }
+                    }
+                }
+                
+                document.getElementById('totalSubmissions').textContent = totalSubmissions;
+
+                // Cargar cuestionarios
+                const quizzes = await moodleAPI.getQuizzes(courseIds);
+                document.getElementById('totalQuizzes').textContent = quizzes.quizzes?.length || 0;
+
+                // Cargar foros
+                const forums = await moodleAPI.getForumsByCourses(courseIds);
+                document.getElementById('totalForums').textContent = forums.length || 0;
+
+            } catch (error) {
+                console.error('Error cargando estadÃ­sticas:', error);
+            }
+        }
+
+        // Mostrar materias en el grid
+        function mostrarMaterias(courses) {
+            const grid = document.getElementById('coursesGrid');
+            Utils.clearElement(grid);
+
+            if (courses.length === 0) {
+                grid.innerHTML = `
+                    <div class="alert alert-info" style="grid-column: 1 / -1;">
+                        No se encontraron materias con los filtros aplicados.
+                    </div>
+                `;
+                return;
+            }
+
+            courses.forEach(course => {
+                const card = Utils.createElement('div', {
+                    className: 'course-card',
+                    onclick: () => verDetalleCurso(course.id)
+                });
+
+                card.innerHTML = `
+                    <h3>${course.fullname}</h3>
+                    <p style="color: var(--gray); margin: 0.5rem 0;">
+                        ${course.shortname}
+                    </p>
+                    <div class="course-card-meta">
+                        <span class="badge badge-primary">
+                            ðŸ“… ${course.startdate ? Utils.formatDate(course.startdate, 'short') : 'Sin fecha'}
+                        </span>
+                        ${course.visible ? '<span class="badge badge-success">âœ“ Visible</span>' : '<span class="badge badge-warning">âŠ— Oculto</span>'}
+                    </div>
+                    <button class="btn btn-primary mt-2" style="width: 100%;">
+                        Ver recursos â†’
+                    </button>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        // Ver detalle del curso
+        function verDetalleCurso(courseId) {
+            Utils.navigateTo('course-detail.html', { id: courseId });
+        }
+
+        // Filtrar materias
+        function filtrarMaterias() {
+            const searchTerm = document.getElementById('searchCourses').value;
+            filteredCourses = Utils.filterBySearch(
+                allCourses, 
+                searchTerm, 
+                ['fullname', 'shortname']
+            );
+            mostrarMaterias(filteredCourses);
+        }
+
+        // Ordenar materias
+        function ordenarMaterias() {
+            const sortBy = document.getElementById('sortCourses').value;
+            
+            switch(sortBy) {
+                case 'name':
+                    filteredCourses = Utils.sortByProperty(filteredCourses, 'fullname');
+                    break;
+                case 'recent':
+                    filteredCourses = Utils.sortByProperty(filteredCourses, 'startdate', false);
+                    break;
+                case 'oldest':
+                    filteredCourses = Utils.sortByProperty(filteredCourses, 'startdate', true);
+                    break;
+            }
+            
+            mostrarMaterias(filteredCourses);
+        }
+
+        // Recargar materias
+        async function recargarMaterias() {
+            Utils.showLoading('Recargando materias...');
+            try {
+                await cargarMaterias();
+                Utils.showAlert('Materias actualizadas', 'success');
+            } catch (error) {
+                Utils.showAlert('Error al recargar materias', 'error');
+            } finally {
+                Utils.hideLoading();
+            }
+        }
+
+        // Cerrar sesiÃ³n
+        function logout() {
+            Utils.confirm(
+                'Â¿Seguro que quieres cerrar sesiÃ³n? Se borrarÃ¡n tus credenciales guardadas.',
+                () => {
+                    localStorage.removeItem('moodleConfig');
+                    location.reload();
+                }
+            );
+        }
+    </script>
+</body>
+</html>

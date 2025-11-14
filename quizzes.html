@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIANOIA - Gestión de Cuestionarios</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="navbar-brand">
+                <img src="dianoia_logo.jpg" alt="DIANOIA" class="navbar-logo">
+                <h1>DIANOIA - Cuestionarios</h1>
+            </div>
+            <div class="navbar-info">
+                <div class="user-badge">
+                    <span>👤</span>
+                    <span id="userName">Cargando...</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTAINER -->
+    <div class="container">
+        
+        <!-- BOTONES DE NAVEGACIÓN -->
+        <div class="flex gap-2 mb-2">
+            <button class="btn btn-secondary" onclick="Utils.navigateTo('index.html')">
+                ← Volver a materias
+            </button>
+            <button class="btn btn-secondary" id="backToCourseBtn" style="display: none;">
+                ← Volver al curso
+            </button>
+        </div>
+
+        <!-- HEADER DEL CURSO -->
+        <div class="card mb-3" id="courseHeader">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title" id="courseTitle">Cargando...</h2>
+                    <p style="color: var(--gray); margin-top: 0.5rem;" id="courseBreadcrumb"></p>
+                </div>
+                <button class="btn btn-outline" onclick="recargarDatos()">
+                    🔄 Recargar
+                </button>
+            </div>
+        </div>
+
+        <!-- VISTA: LISTA DE CUESTIONARIOS -->
+        <div id="quizzesListView">
+            
+            <!-- ESTADÍSTICAS -->
+            <div class="stats-grid mb-3">
+                <div class="stat-card">
+                    <h3>❓ Total de cuestionarios</h3>
+                    <div class="number" id="statTotalQuizzes">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>📊 Intentos completados</h3>
+                    <div class="number" id="statTotalAttempts">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>✏️ Pendientes de revisar</h3>
+                    <div class="number" id="statPendingReview">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>📈 Promedio general</h3>
+                    <div class="number" id="statAverageGrade">-</div>
+                </div>
+            </div>
+
+            <!-- LISTA DE CUESTIONARIOS -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Cuestionarios del curso</h3>
+                </div>
+                <div id="quizzesList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Cargando cuestionarios...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA: INTENTOS DE UN CUESTIONARIO -->
+        <div id="attemptsView" class="hidden">
+            
+            <!-- INFO DEL CUESTIONARIO -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h3 class="card-title" id="quizTitle">Cuestionario</h3>
+                </div>
+                <div id="quizInfo"></div>
+            </div>
+
+            <!-- FILTROS -->
+            <div class="card mb-3">
+                <div class="flex-between" style="flex-wrap: wrap; gap: 1rem;">
+                    <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
+                        <input 
+                            type="text" 
+                            id="searchAttempts" 
+                            class="form-control" 
+                            placeholder="🔍 Buscar estudiante..."
+                            onkeyup="filtrarIntentos()"
+                        >
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <select id="filterStatus" class="form-control" onchange="filtrarIntentos()">
+                            <option value="all">Todos los intentos</option>
+                            <option value="needsReview">Necesitan revisión</option>
+                            <option value="reviewed">Ya revisados</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <select id="sortAttempts" class="form-control" onchange="ordenarIntentos()">
+                            <option value="lastname">Ordenar por apellido</option>
+                            <option value="date">Por fecha de finalización</option>
+                            <option value="grade">Por calificación</option>
+                            <option value="attempt">Por número de intento</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACCIONES MASIVAS -->
+            <div class="card mb-3">
+                <div class="flex gap-2">
+                    <button class="btn btn-primary" onclick="revisarTodosConIA()">
+                        🤖 Revisar todos los pendientes con IA
+                    </button>
+                    <button class="btn btn-outline" onclick="exportarResultados()">
+                        📊 Exportar resultados
+                    </button>
+                </div>
+            </div>
+
+            <!-- LISTA DE INTENTOS -->
+            <div id="attemptsList"></div>
+        </div>
+
+    </div>
+
+    <!-- MODAL DE REVISIÓN -->
+    <div id="reviewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Revisión con IA</h2>
+                <span class="close-modal" onclick="closeModal()">×</span>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/utils.js"></script>
+    <script src="js/moodle-api.js"></script>
+    <script src="js/gemini-api.js"></script>
+    
+    <script>
+        let currentCourse = null;
+        let currentQuiz = null;
+        let allQuizzes = [];
+        let allAttempts = [];
+        let filteredAttempts = [];
+        let viewMode = 'list'; // 'list' o 'attempts'
+
+        // Inicializar
+        window.onload = async function() {
+            if (!moodleAPI.isConfigured()) {
+                Utils.showAlert('No estás conectado. Redirigiendo...', 'warning');
+                setTimeout(() => Utils.navigateTo('index.html'), 2000);
+                return;
+            }
+
+            const params = Utils.getUrlParams();
+            const courseId = params.courseId;
+
+            if (!courseId) {
+                Utils.showAlert('No se especificó un curso', 'error');
+                setTimeout(() => Utils.navigateTo('index.html'), 2000);
+                return;
+            }
+
+            const userInfo = await moodleAPI.getSiteInfo();
+            document.getElementById('userName').textContent = userInfo.fullname;
+
+            await cargarCurso(courseId);
+
+            // Si se especificó un cuestionario, ir directo a sus intentos
+            if (params.quizId) {
+                const quiz = allQuizzes.find(q => q.id == params.quizId);
+                if (quiz) {
+                    await verIntentos(quiz);
+                }
+            }
+        };
+
+        // Cargar curso y sus cuestionarios
+        async function cargarCurso(courseId) {
+            try {
+                Utils.showLoading('Cargando cuestionarios...');
+
+                const courses = await moodleAPI.getCourses();
+                currentCourse = courses.find(c => c.id == courseId);
+
+                if (!currentCourse) {
+                    throw new Error('Curso no encontrado');
+                }
+
+                document.getElementById('courseTitle').textContent = currentCourse.fullname;
+                document.getElementById('courseBreadcrumb').textContent = currentCourse.shortname;
+                document.getElementById('backToCourseBtn').style.display = 'block';
+                document.getElementById('backToCourseBtn').onclick = () => Utils.navigateTo('course-detail.html', { id: courseId });
+
+                const quizzesData = await moodleAPI.getQuizzes([courseId]);
+                allQuizzes = quizzesData.quizzes || [];
+
+                await cargarEstadisticas();
+                mostrarCuestionarios();
+
+                Utils.hideLoading();
+
+            } catch (error) {
+                console.error('Error:', error);
+                Utils.showAlert(`Error al cargar el curso: ${error.message}`, 'error');
+                Utils.hideLoading();
+            }
+        }
+
+        // Cargar estadísticas generales (simplificadas)
+        async function cargarEstadisticas() {
+            // Mostrar solo estadísticas básicas sin consultar todos los intentos
+            // (para evitar cientos de peticiones a la API)
+            
+            document.getElementById('statTotalQuizzes').textContent = allQuizzes.length;
+            document.getElementById('statTotalAttempts').textContent = '-';
+            document.getElementById('statPendingReview').textContent = '-';
+            document.getElementById('statAverageGrade').textContent = '-';
+            
+            // Nota: Las estadísticas detalladas se calcularían al ver cada cuestionario
+            // Para evitar sobrecargar la API de Moodle con cientos de peticiones
+        }
+
+        // Mostrar lista de cuestionarios
+        function mostrarCuestionarios() {
+            const container = document.getElementById('quizzesList');
+
+            if (allQuizzes.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No hay cuestionarios en este curso</div>';
+                return;
+            }
+
+            container.innerHTML = allQuizzes.map(quiz => {
+                const closeDate = quiz.timeclose 
+                    ? Utils.formatDate(quiz.timeclose, 'medium')
+                    : 'Sin fecha límite';
+                
+                const now = Date.now() / 1000;
+                const isClosed = quiz.timeclose && quiz.timeclose < now;
+                const statusBadge = isClosed 
+                    ? '<span class="badge badge-danger">🚨 Cerrado</span>'
+                    : '<span class="badge badge-success">✓ Activo</span>';
+
+                return `
+                    <div class="card mb-2">
+                        <div class="flex-between">
+                            <div style="flex: 1;">
+                                <h4 style="color: var(--dianoia-blue); margin-bottom: 0.5rem;">
+                                    ${quiz.name}
+                                </h4>
+                                <div style="color: var(--gray); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    📅 Cierre: ${closeDate} ${statusBadge}
+                                </div>
+                                <div style="color: var(--gray); font-size: 0.85rem;">
+                                    ⏱️ Tiempo: ${quiz.timelimit ? `${quiz.timelimit/60} min` : 'Ilimitado'} | 
+                                    📊 Calificación máxima: ${quiz.grade || 10} puntos
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick='verIntentos(${JSON.stringify(quiz).replace(/'/g, "\\'")})'  style="white-space: nowrap;">
+                                Ver intentos →
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Ver intentos de un cuestionario
+        async function verIntentos(quiz) {
+            currentQuiz = quiz;
+            viewMode = 'attempts';
+
+            document.getElementById('quizzesListView').classList.add('hidden');
+            document.getElementById('attemptsView').classList.remove('hidden');
+            document.getElementById('quizTitle').textContent = quiz.name;
+            document.getElementById('courseBreadcrumb').textContent = `${currentCourse.shortname} > ${quiz.name}`;
+
+            // Info del cuestionario
+            document.getElementById('quizInfo').innerHTML = `
+                <div style="padding: 1rem;">
+                    <p style="color: var(--gray); margin-bottom: 0.5rem;">
+                        <strong>Fecha de cierre:</strong> ${quiz.timeclose ? Utils.formatDate(quiz.timeclose, 'full') : 'Sin fecha límite'}
+                    </p>
+                    <p style="color: var(--gray); margin-bottom: 0.5rem;">
+                        <strong>Tiempo límite:</strong> ${quiz.timelimit ? `${quiz.timelimit/60} minutos` : 'Ilimitado'}
+                    </p>
+                    <p style="color: var(--gray); margin-bottom: 0.5rem;">
+                        <strong>Calificación máxima:</strong> ${quiz.grade || 10} puntos
+                    </p>
+                    <p style="color: var(--gray); margin-bottom: 0.5rem;">
+                        <strong>Intentos permitidos:</strong> ${quiz.attempts || 'Ilimitados'}
+                    </p>
+                    ${quiz.intro ? `<p style="color: var(--gray); border-left: 3px solid var(--dianoia-blue); padding-left: 1rem; margin-top: 1rem;">${quiz.intro}</p>` : ''}
+                </div>
+            `;
+
+            Utils.showLoading('Cargando participantes del curso...');
+
+            try {
+                allAttempts = [];
+
+                // PASO 1: Obtener SOLO estudiantes activos del curso
+                const allParticipants = await moodleAPI.getCourseParticipants(currentCourse.id);
+                
+                // Filtrar solo estudiantes (excluir profesores, editores, etc.)
+                const students = allParticipants.filter(p => {
+                    // Buscar el rol de estudiante en los roles del usuario
+                    return p.roles && p.roles.some(role => 
+                        role.shortname === 'student' || 
+                        role.roleid === 5 || // ID típico de estudiante
+                        role.name?.toLowerCase().includes('estudiante')
+                    );
+                });
+                
+                if (students.length === 0) {
+                    Utils.showAlert('No hay estudiantes matriculados en este curso', 'warning');
+                    filteredAttempts = [];
+                    mostrarIntentos();
+                    return;
+                }
+
+                Utils.showLoading(`Buscando intentos de ${students.length} estudiantes (filtrados de ${allParticipants.length} participantes totales)...`);
+
+                // PASO 2: Para cada estudiante, obtener sus intentos del cuestionario
+                let processedUsers = 0;
+                let errorCount = 0;
+                let timeoutCount = 0;
+                
+                // Función helper con timeout
+                const fetchWithTimeout = async (promise, timeoutMs = 5000) => {
+                    return Promise.race([
+                        promise,
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Timeout')), timeoutMs)
+                        )
+                    ]);
+                };
+                
+                for (const student of students) {
+                    try {
+                        processedUsers++;
+                        
+                        // Actualizar mensaje de carga cada 3 usuarios
+                        if (processedUsers % 3 === 0 || processedUsers === students.length) {
+                            Utils.showLoading(`Procesando estudiante ${processedUsers}/${students.length}...`);
+                        }
+
+                        // Intentar obtener los intentos del estudiante con timeout de 5 segundos
+                        const attemptsData = await fetchWithTimeout(
+                            moodleAPI.call('mod_quiz_get_user_attempts', {
+                                quizid: quiz.id,
+                                userid: student.id,
+                                status: 'finished'
+                            }),
+                            5000
+                        );
+
+                        if (attemptsData.attempts && attemptsData.attempts.length > 0) {
+                            // Procesar cada intento de este estudiante
+                            for (const attempt of attemptsData.attempts) {
+                                // Validar que el attempt tenga ID
+                                if (!attempt.id) {
+                                    console.warn('Intento sin ID para usuario:', student.id);
+                                    continue;
+                                }
+
+                                try {
+                                    // Obtener datos del intento con timeout de 5 segundos
+                                    const attemptData = await fetchWithTimeout(
+                                        moodleAPI.getAttemptReview(attempt.id),
+                                        5000
+                                    );
+                                    
+                                    // Identificar preguntas que necesitan revisión manual
+                                    const essayQuestions = attemptData.questions?.filter(q => 
+                                        q.type === 'essay' || q.type === 'shortanswer'
+                                    ) || [];
+
+                                    const needsReview = essayQuestions.some(q => !q.manuallygraded);
+
+                                    allAttempts.push({
+                                        ...attempt,
+                                        studentName: `${student.lastname}, ${student.firstname}`,
+                                        firstname: student.firstname,
+                                        questions: attemptData.questions || [],
+                                        essayQuestions: essayQuestions,
+                                        needsReview: needsReview
+                                    });
+                                } catch (e) {
+                                    if (e.message === 'Timeout') {
+                                        console.warn(`Timeout obteniendo datos del intento ${attempt.id}`);
+                                        timeoutCount++;
+                                    } else {
+                                        console.warn(`No se pudo obtener datos del intento ${attempt.id}:`, e.message);
+                                    }
+                                    errorCount++;
+                                    
+                                    // Aún así agregar el intento con información básica
+                                    allAttempts.push({
+                                        ...attempt,
+                                        studentName: `${student.lastname}, ${student.firstname}`,
+                                        firstname: student.firstname,
+                                        questions: [],
+                                        essayQuestions: [],
+                                        needsReview: false,
+                                        hasError: true
+                                    });
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        if (e.message === 'Timeout') {
+                            console.warn(`Timeout consultando intentos de usuario ${student.id} (${student.lastname})`);
+                            timeoutCount++;
+                        } else if (!e.message.includes('nousersattempts')) {
+                            console.warn(`Error obteniendo intentos de usuario ${student.id}:`, e.message);
+                        }
+                    }
+                }
+
+                console.log('Procesamiento completado. Total intentos:', allAttempts.length);
+
+                filteredAttempts = [...allAttempts];
+
+                // Mostrar intentos con manejo de errores
+                try {
+                    mostrarIntentos();
+                } catch (displayError) {
+                    console.error('Error al mostrar intentos:', displayError);
+                    document.getElementById('attemptsList').innerHTML = `
+                        <div class="alert alert-error">
+                            Error al mostrar los intentos. Por favor recarga la página.
+                        </div>
+                    `;
+                }
+
+                if (allAttempts.length > 0) {
+                    let message = `Se encontraron ${allAttempts.length} intentos completados`;
+                    if (errorCount > 0) {
+                        message += ` (${errorCount} con errores`;
+                        if (timeoutCount > 0) {
+                            message += `, ${timeoutCount} por timeout`;
+                        }
+                        message += ')';
+                    }
+                    Utils.showAlert(message, errorCount > 0 ? 'warning' : 'success', 5000);
+                } else {
+                    Utils.showAlert('No hay intentos completados en este cuestionario', 'info');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                Utils.showAlert(`Error al cargar intentos: ${error.message}`, 'error');
+            } finally {
+                // GARANTIZAR que siempre oculte el loading
+                Utils.hideLoading();
+                
+                // También ocultar directamente cualquier elemento de loading
+                const loadingElements = document.querySelectorAll('.loading, #globalLoading, #loadingPanel');
+                loadingElements.forEach(el => {
+                    el.style.display = 'none';
+                    el.remove();
+                });
+                
+                console.log('Loading ocultado');
+            }
+        }
+
+        // Mostrar lista de intentos
+        function mostrarIntentos() {
+            const container = document.getElementById('attemptsList');
+
+            if (!container) {
+                console.error('No se encontró el contenedor attemptsList');
+                return;
+            }
+
+            if (!filteredAttempts || filteredAttempts.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No hay intentos completados para este cuestionario</div>';
+                return;
+            }
+
+            try {
+                const html = filteredAttempts.map((attempt, index) => {
+                    try {
+                        const statusBadge = attempt.needsReview
+                            ? `<span class="badge badge-warning">✏️ Necesita revisión</span>`
+                            : `<span class="badge badge-success">✅ Revisado</span>`;
+
+                        const score = attempt.sumgrades !== null && attempt.sumgrades !== undefined
+                            ? `${attempt.sumgrades.toFixed(2)}/${currentQuiz.grade || 10}`
+                            : 'Sin calificar';
+
+                        const essayCount = attempt.essayQuestions?.length || 0;
+                        const essayInfo = essayCount > 0 
+                            ? `<br>✏️ ${essayCount} pregunta${essayCount > 1 ? 's' : ''} de texto`
+                            : '';
+
+                        const errorBadge = attempt.hasError 
+                            ? `<span class="badge badge-danger">⚠️ Error al cargar detalles</span>` 
+                            : '';
+
+                        return `
+                            <div class="card mb-2" data-attempt-index="${index}">
+                                <div class="submission-header">
+                                    <div>
+                                        <div class="student-name">
+                                            ${attempt.studentName || 'Estudiante desconocido'}
+                                            ${statusBadge}
+                                            ${errorBadge}
+                                        </div>
+                                        <div style="color: var(--gray); margin-top: 0.25rem;">
+                                            📅 Completado: ${attempt.timefinish ? Utils.formatDate(attempt.timefinish, 'full') : 'Fecha desconocida'}
+                                            | Intento ${attempt.attempt || '?'}
+                                            | 📊 Puntuación: ${score}
+                                            ${essayInfo}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="submission-actions">
+                                    ${attempt.needsReview && !attempt.hasError ? `
+                                        <button class="btn btn-primary" onclick="revisarConIA(${index})">
+                                            🤖 Revisar con IA
+                                        </button>
+                                    ` : ''}
+                                    ${!attempt.hasError ? `
+                                        <button class="btn btn-outline" onclick="verDetalleIntento(${index})">
+                                            👁️ Ver respuestas
+                                        </button>
+                                    ` : ''}
+                                    ${attempt.essayQuestions && attempt.essayQuestions.length > 0 ? `
+                                        <button class="btn btn-warning" onclick="calificarManual(${index})">
+                                            ✏️ Calificar manualmente
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    } catch (itemError) {
+                        console.error('Error al renderizar intento:', itemError, attempt);
+                        return `
+                            <div class="card mb-2">
+                                <div class="alert alert-error">
+                                    Error al mostrar este intento (${attempt.studentName || 'Desconocido'})
+                                </div>
+                            </div>
+                        `;
+                    }
+                }).join('');
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error en mostrarIntentos:', error);
+                container.innerHTML = `
+                    <div class="alert alert-error">
+                        Error al mostrar los intentos. Detalles en la consola.
+                    </div>
+                `;
+            }
+        }
+
+        // Filtrar intentos
+        function filtrarIntentos() {
+            const searchTerm = document.getElementById('searchAttempts').value.toLowerCase();
+            const status = document.getElementById('filterStatus').value;
+
+            filteredAttempts = allAttempts.filter(attempt => {
+                const matchSearch = attempt.studentName.toLowerCase().includes(searchTerm);
+                const matchStatus = status === 'all' || 
+                    (status === 'needsReview' && attempt.needsReview) || 
+                    (status === 'reviewed' && !attempt.needsReview);
+                return matchSearch && matchStatus;
+            });
+
+            mostrarIntentos();
+        }
+
+        // Ordenar intentos
+        function ordenarIntentos() {
+            const sortBy = document.getElementById('sortAttempts').value;
+            
+            filteredAttempts.sort((a, b) => {
+                switch(sortBy) {
+                    case 'lastname':
+                        return a.studentName.localeCompare(b.studentName);
+                    case 'date':
+                        return b.timefinish - a.timefinish;
+                    case 'grade':
+                        return (b.sumgrades || -1) - (a.sumgrades || -1);
+                    case 'attempt':
+                        return b.attempt - a.attempt;
+                    default:
+                        return 0;
+                }
+            });
+
+            mostrarIntentos();
+        }
+
+        // Ver detalle del intento
+        async function verDetalleIntento(attemptIndex) {
+            const attempt = filteredAttempts[attemptIndex];
+            if (!attempt) return;
+
+            openModal(`Respuestas - ${attempt.studentName}`);
+            document.getElementById('modalBody').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Cargando respuestas...</p>
+                </div>
+            `;
+
+            try {
+                // Función para extraer texto de respuesta del HTML
+                function extraerRespuestaDeHTML(htmlString) {
+                    if (!htmlString) return 'Sin respuesta';
+                    
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = htmlString;
+                    
+                    // Buscar el div con la respuesta (diferentes posibles clases)
+                    const responseDiv = tempDiv.querySelector('.qtype_essay_response, .answer, [role="textbox"]');
+                    
+                    if (responseDiv) {
+                        // Obtener el texto limpio (sin contar HTML interno)
+                        return responseDiv.innerHTML.trim() || 'Sin respuesta';
+                    }
+                    
+                    return 'Sin respuesta';
+                }
+                
+                let content = `
+                    <div style="margin-bottom: 1.5rem;">
+                        <p><strong>Estudiante:</strong> ${attempt.studentName}</p>
+                        <p><strong>Intento:</strong> ${attempt.attempt}</p>
+                        <p><strong>Puntuación:</strong> ${attempt.sumgrades?.toFixed(2) || 'Sin calificar'}/${currentQuiz.grade || 10}</p>
+                        <p><strong>Completado:</strong> ${Utils.formatDate(attempt.timefinish, 'full')}</p>
+                    </div>
+                    <hr>
+                `;
+
+                if (attempt.questions && attempt.questions.length > 0) {
+                    attempt.questions.forEach((question, idx) => {
+                        const isCorrect = question.state?.includes('correct');
+                        const isPartial = question.state?.includes('partial');
+                        const statusIcon = isCorrect ? '✅' : isPartial ? '🟡' : '❌';
+                        const statusClass = isCorrect ? 'answer-correct' : isPartial ? 'answer-partial' : 'answer-incorrect';
+
+                        // Extraer la respuesta del HTML
+                        const studentResponse = extraerRespuestaDeHTML(question.html);
+                        
+                        // Extraer también el texto de la pregunta del HTML
+                        let questionText = question.questiontext || 'Pregunta';
+                        if (question.html && !question.questiontext) {
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = question.html;
+                            const qtextDiv = tempDiv.querySelector('.qtext');
+                            if (qtextDiv) {
+                                questionText = qtextDiv.textContent.trim();
+                            }
+                        }
+
+                        content += `
+                            <div class="question-block" style="margin-bottom: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border-left: 4px solid var(--dianoia-blue);">
+                                <div style="font-weight: 600; margin-bottom: 0.5rem;">
+                                    ${idx + 1}. ${questionText}
+                                </div>
+                                <div class="answer-text ${statusClass}" style="padding: 0.5rem; background: white; border-radius: 4px; margin-top: 0.5rem;">
+                                    ${statusIcon} <strong>Respuesta del estudiante:</strong><br>
+                                    <div style="margin-top: 0.5rem; white-space: pre-wrap;">${studentResponse}</div>
+                                </div>
+                                ${question.rightanswer ? `
+                                    <div style="padding: 0.5rem; margin-top: 0.5rem; color: var(--gray); font-size: 0.9rem;">
+                                        💡 <strong>Respuesta correcta/esperada:</strong> ${question.rightanswer}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+                } else {
+                    content += '<div class="alert alert-info">No se pudieron cargar las respuestas</div>';
+                }
+
+                content += `
+                    <button class="btn btn-secondary mt-2" onclick="closeModal()">Cerrar</button>
+                `;
+
+                document.getElementById('modalBody').innerHTML = content;
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('modalBody').innerHTML = `
+                    <div class="alert alert-error">Error al cargar las respuestas: ${error.message}</div>
+                    <button class="btn btn-secondary mt-2" onclick="closeModal()">Cerrar</button>
+                `;
+            }
+        }
+
+        // Revisar con IA
+        let currentAttemptForReview = null;
+        let materiaSeleccionada = 'general';
+
+        async function revisarConIA(attemptIndex) {
+            const attempt = filteredAttempts[attemptIndex];
+            if (!attempt) return;
+
+            currentAttemptForReview = attempt;
+
+            // Extraer respuestas del HTML para cada pregunta
+            function extraerRespuestaDeHTML(htmlString) {
+                if (!htmlString) return 'Sin respuesta';
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = htmlString;
+                const responseDiv = tempDiv.querySelector('.qtype_essay_response, .answer, [role="textbox"]');
+                return responseDiv ? responseDiv.innerHTML.trim() : 'Sin respuesta';
+            }
+
+            // Preparar preguntas con sus respuestas
+            const preguntasConRespuestas = attempt.essayQuestions.map(q => {
+                let questionText = q.questiontext || 'Pregunta';
+                if (q.html && !q.questiontext) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = q.html;
+                    const qtextDiv = tempDiv.querySelector('.qtext');
+                    if (qtextDiv) questionText = qtextDiv.textContent.trim();
+                }
+                
+                return {
+                    ...q,
+                    questionText,
+                    studentResponse: extraerRespuestaDeHTML(q.html),
+                    calificacion: null,
+                    feedback: null
+                };
+            });
+
+            openModal(`Revisar con IA - ${attempt.studentName}`);
+            
+            let content = `
+                <div style="margin-bottom: 1rem;">
+                    <p><strong>Estudiante:</strong> ${attempt.studentName}</p>
+                    <p><strong>Cuestionario:</strong> ${currentQuiz.name}</p>
+                    <p><strong>Total preguntas de texto:</strong> ${preguntasConRespuestas.length}</p>
+                </div>
+
+                <div class="alert alert-info" style="margin-bottom: 1rem;">
+                    <strong>💡 Opciones de guardado:</strong><br>
+                    <strong>🎯 Guardar en Moodle:</strong> Guarda directamente via API (nuevo)<br>
+                    <strong>📋 Para Bookmarklet:</strong> Guarda en navegador para usar con bookmarklet (método anterior)
+                </div>
+
+                <div class="form-group mb-3">
+                    <label><strong>Selecciona el área de la materia:</strong></label>
+                    <select id="materiaSelector" class="form-control">
+                        <option value="general">General</option>
+                        <option value="antropologia">Antropología Filosófica</option>
+                        <option value="antigua">Historia de la Filosofía Antigua</option>
+                        <option value="contemporanea">Filosofía Contemporánea</option>
+                        <option value="etica">Ética</option>
+                        <option value="metodologia">Metodología de la Investigación</option>
+                        <option value="logica">Lógica Formal</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <button id="btnAnalizarTodas" class="btn btn-primary" onclick="analizarTodasLasPreguntas()">
+                        🚀 Analizar TODAS con IA
+                    </button>
+                    <button id="btnGuardarTodasMoodle" class="btn btn-success" onclick="guardarTodasLasCalificacionesEnMoodle()" style="display: none;">
+                        💾 Guardar TODAS en Moodle
+                    </button>
+                    <button id="btnGuardarTodas" class="btn btn-outline" onclick="guardarTodasLasCalificaciones()" style="display: none;">
+                        📋 Guardar para Bookmarklet
+                    </button>
+                </div>
+
+                <hr>
+
+                <div id="preguntasList">
+            `;
+
+            preguntasConRespuestas.forEach((pregunta, idx) => {
+                const puntajeMax = pregunta.maxmark || 2;
+                content += `
+                    <div class="card mb-3" id="pregunta-${idx}" style="border-left: 4px solid var(--dianoia-blue);">
+                        <div style="padding: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                                <h4 style="margin: 0;">Pregunta ${idx + 1}</h4>
+                                <span class="badge badge-info">Max: ${puntajeMax} puntos</span>
+                            </div>
+                            
+                            <div style="background: #f9fafb; padding: 0.75rem; border-radius: 4px; margin: 0.5rem 0;">
+                                <strong>Enunciado:</strong><br>
+                                ${pregunta.questionText}
+                            </div>
+
+                            <div style="background: #fff; padding: 0.75rem; border-radius: 4px; border: 1px solid #e5e7eb; margin: 0.5rem 0;">
+                                <strong>Respuesta del estudiante:</strong><br>
+                                <div style="margin-top: 0.5rem; color: #374151;">${pregunta.studentResponse}</div>
+                            </div>
+
+                            <div id="feedback-${idx}" style="display: none; background: #f0f9ff; padding: 0.75rem; border-radius: 4px; border: 1px solid #bae6fd; margin: 0.5rem 0;">
+                                <!-- El feedback de IA aparecerá aquí -->
+                            </div>
+
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;">
+                                <button class="btn btn-primary btn-sm" onclick="revisarPreguntaConIA(${idx}, ${puntajeMax})">
+                                    🤖 Analizar con IA
+                                </button>
+                                <input type="number" 
+                                    id="puntos-${idx}" 
+                                    class="form-control" 
+                                    style="width: 80px; display: inline-block;" 
+                                    min="0" 
+                                    max="${puntajeMax}" 
+                                    step="0.1"
+                                    placeholder="Puntos">
+                                <button class="btn btn-success btn-sm" onclick="guardarCalificacionPreguntaEnMoodle(${idx})">
+                                    💾 En Moodle
+                                </button>
+                                <button class="btn btn-outline btn-sm" onclick="guardarCalificacionPregunta(${idx})">
+                                    📋 Bookmarklet
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            content += `
+                </div>
+
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">
+                    <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+                </div>
+            `;
+
+            document.getElementById('modalBody').innerHTML = content;
+
+            // Guardar preguntas en variable global para acceso desde otras funciones
+            window.currentPreguntasRevision = preguntasConRespuestas;
+        }
+
+        // Analizar TODAS las preguntas con IA automáticamente
+        async function analizarTodasLasPreguntas() {
+            const materiaSeleccionada = document.getElementById('materiaSelector').value;
+            const btnAnalizar = document.getElementById('btnAnalizarTodas');
+            const preguntasConRespuestas = window.currentPreguntasRevision;
+            
+            if (!preguntasConRespuestas || preguntasConRespuestas.length === 0) {
+                Utils.showAlert('No hay preguntas para analizar', 'warning');
+                return;
+            }
+
+            // Deshabilitar botón durante el proceso
+            btnAnalizar.disabled = true;
+            btnAnalizar.textContent = '⏳ Analizando...';
+
+            let analizadas = 0;
+            const total = preguntasConRespuestas.length;
+
+            for (let i = 0; i < preguntasConRespuestas.length; i++) {
+                const pregunta = preguntasConRespuestas[i];
+                
+                // Actualizar progreso en el botón
+                btnAnalizar.textContent = `⏳ Analizando ${analizadas + 1}/${total}...`;
+                
+                // Analizar esta pregunta
+                await revisarPreguntaConIA(i, pregunta.maxmark);
+                
+                analizadas++;
+                
+                // Pequeña pausa entre llamadas para no saturar la API
+                if (i < preguntasConRespuestas.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+
+            // Restaurar botón
+            btnAnalizar.disabled = false;
+            btnAnalizar.textContent = '🚀 Analizar TODAS con IA';
+
+            // Mostrar ambos botones de guardar
+            document.getElementById('btnGuardarTodasMoodle').style.display = 'inline-block';
+            document.getElementById('btnGuardarTodas').style.display = 'inline-block';
+
+            Utils.showAlert(`✅ Análisis completo!\n\n${total} preguntas analizadas.\n\nRevisá los puntajes y elegí cómo guardar`, 'success', 5000);
+        }
+
+        // ========== GUARDAR EN MOODLE (NUEVO) ==========
+        
+        
+        // ========== GUARDAR EN MOODLE (ACTUALIZADO) ==========
+        
+        // Guardar calificación de una pregunta individual DIRECTAMENTE EN MOODLE
+        async function guardarCalificacionPreguntaEnMoodle(preguntaIdx) {
+            const puntos = parseFloat(document.getElementById(`puntos-${preguntaIdx}`).value);
+            const pregunta = window.currentPreguntasRevision[preguntaIdx];
+            
+            if (isNaN(puntos)) {
+                Utils.showAlert('Por favor ingresa un puntaje válido', 'warning');
+                return;
+            }
+
+            if (puntos < 0 || puntos > pregunta.maxmark) {
+                Utils.showAlert(`El puntaje debe estar entre 0 y ${pregunta.maxmark}`, 'warning');
+                return;
+            }
+
+            // Extraer comentario limpio
+            let comentarioLimpio = '';
+            if (pregunta.feedback) {
+                const regex = /RETROALIMENTACIÓN PARA EL ESTUDIANTE:\s*\n([\s\S]+)/i;
+                const match = pregunta.feedback.match(regex);
+                
+                if (match && match[1]) {
+                    comentarioLimpio = match[1].trim();
+                } else {
+                    comentarioLimpio = pregunta.feedback;
+                }
+                
+                // Limpiar markdown
+                comentarioLimpio = comentarioLimpio
+                    .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
+                    .replace(/\*\*(.+?)\*\*/g, '$1')
+                    .replace(/\*(.+?)\*/g, '$1')
+                    .replace(/__(.+?)__/g, '$1')
+                    .replace(/_(.+?)_/g, '$1')
+                    .replace(/~~(.+?)~~/g, '$1')
+                    .replace(/`(.+?)`/g, '$1')
+                    .replace(/^#{1,6}\s+/gm, '')
+                    .replace(/^\s*[-*+]\s+/gm, '• ')
+                    .replace(/^\s*\d+\.\s+/gm, '')
+                    .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+                    .replace(/>\s+/gm, '')
+                    .replace(/---+/g, '')
+                    .replace(/\n{3,}/g, '\n\n')
+                    .trim();
+            }
+
+            Utils.showLoading('Guardando calificación en Moodle...');
+
+            try {
+                // Usar la función CORRECTA de la API
+                const result = await moodleAPI.gradeQuizQuestion(
+                    currentAttemptForReview.id,
+                    pregunta.slot,
+                    puntos,
+                    comentarioLimpio
+                );
+
+                Utils.hideLoading();
+                
+                // Guardar en la pregunta
+                window.currentPreguntasRevision[preguntaIdx].calificacion = puntos;
+                
+                // Feedback visual
+                Utils.showAlert(
+                    `✅ Guardado en Moodle!\n\n• Puntos: ${puntos}/${pregunta.maxmark}\n• Comentario agregado`, 
+                    'success', 
+                    5000
+                );
+                
+                // Cambiar el color del borde de la card
+                const card = document.getElementById(`pregunta-${preguntaIdx}`);
+                card.style.borderLeftColor = 'var(--success)';
+                card.style.borderLeftWidth = '6px';
+                
+                // Agregar badge visual
+                const header = card.querySelector('h4');
+                if (header && !header.querySelector('.badge-success')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge badge-success';
+                    badge.style.marginLeft = '0.5rem';
+                    badge.textContent = `✓ ${puntos}/${pregunta.maxmark}`;
+                    header.appendChild(badge);
+                }
+                
+            } catch (error) {
+                Utils.hideLoading();
+                console.error('Error al guardar:', error);
+                
+                // Mensaje de error más detallado
+                let errorMsg = `❌ Error al guardar en Moodle:\n${error.message}\n\n`;
+                
+                if (error.message.includes('permisos')) {
+                    errorMsg += `💡 Posibles soluciones:\n`;
+                    errorMsg += `1. Verifica que tu usuario sea profesor del curso\n`;
+                    errorMsg += `2. Verifica que el curso tenga habilitada la calificación manual\n`;
+                    errorMsg += `3. Como alternativa, usa el bookmarklet`;
+                } else if (error.message.includes('cerrado') || error.message.includes('calificado')) {
+                    errorMsg += `💡 El intento puede estar cerrado o ya calificado.\n`;
+                    errorMsg += `Intenta usar el bookmarklet como alternativa.`;
+                } else {
+                    errorMsg += `💡 Intenta usar el bookmarklet como alternativa.`;
+                }
+                
+                Utils.showAlert(errorMsg, 'error', 12000);
+            }
+        }
+
+        // Guardar TODAS las calificaciones DIRECTAMENTE EN MOODLE
+        async function guardarTodasLasCalificacionesEnMoodle() {
+            const preguntasConRespuestas = window.currentPreguntasRevision;
+            
+            if (!preguntasConRespuestas || preguntasConRespuestas.length === 0) {
+                Utils.showAlert('No hay preguntas para guardar', 'warning');
+                return;
+            }
+
+            // Recopilar todas las calificaciones
+            const grades = [];
+            let faltanPuntajes = 0;
+
+            for (let i = 0; i < preguntasConRespuestas.length; i++) {
+                const pregunta = preguntasConRespuestas[i];
+                const puntosInput = document.getElementById(`puntos-${i}`);
+                const puntos = puntosInput ? parseFloat(puntosInput.value) : null;
+
+                if (puntos === null || isNaN(puntos)) {
+                    faltanPuntajes++;
+                    continue;
+                }
+
+                // Extraer comentario limpio
+                let comentarioLimpio = '';
+                if (pregunta.feedback) {
+                    const regex = /RETROALIMENTACIÓN PARA EL ESTUDIANTE:\s*\n([\s\S]+)/i;
+                    const match = pregunta.feedback.match(regex);
+                    
+                    if (match && match[1]) {
+                        comentarioLimpio = match[1].trim();
+                    } else {
+                        comentarioLimpio = pregunta.feedback;
+                    }
+                    
+                    comentarioLimpio = comentarioLimpio
+                        .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
+                        .replace(/\*\*(.+?)\*\*/g, '$1')
+                        .replace(/\*(.+?)\*/g, '$1')
+                        .replace(/__(.+?)__/g, '$1')
+                        .replace(/_(.+?)_/g, '$1')
+                        .replace(/~~(.+?)~~/g, '$1')
+                        .replace(/`(.+?)`/g, '$1')
+                        .replace(/^#{1,6}\s+/gm, '')
+                        .replace(/^\s*[-*+]\s+/gm, '• ')
+                        .replace(/^\s*\d+\.\s+/gm, '')
+                        .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+                        .replace(/>\s+/gm, '')
+                        .replace(/---+/g, '')
+                        .replace(/\n{3,}/g, '\n\n')
+                        .trim();
+                }
+
+                grades.push({
+                    slot: pregunta.slot,
+                    grade: puntos,
+                    comment: comentarioLimpio
+                });
+            }
+
+            if (grades.length === 0) {
+                Utils.showAlert('No hay calificaciones para guardar. Primero asigná puntajes.', 'warning');
+                return;
+            }
+
+            Utils.showLoading(`Guardando ${grades.length} calificaciones en Moodle...`);
+
+            try {
+                // Guardar todas usando la función correcta
+                const result = await moodleAPI.gradeMultipleQuizQuestions(
+                    currentAttemptForReview.id,
+                    grades
+                );
+
+                Utils.hideLoading();
+
+                // Verificar resultados
+                const exitosos = result.results.filter(r => r.success).length;
+                const fallidos = result.results.filter(r => !r.success).length;
+                
+                let mensaje = `Resultado del guardado:\n\n`;
+                mensaje += `✅ Exitosos: ${exitosos}\n`;
+                if (fallidos > 0) {
+                    mensaje += `❌ Fallidos: ${fallidos}\n`;
+                    // Mostrar detalles de errores
+                    const errores = result.results.filter(r => !r.success);
+                    if (errores.length > 0 && errores.length <= 3) {
+                        mensaje += `\nErrores:\n`;
+                        errores.forEach(err => {
+                            mensaje += `• Slot ${err.slot}: ${err.error}\n`;
+                        });
+                    }
+                }
+                if (faltanPuntajes > 0) {
+                    mensaje += `⭐ Omitidos: ${faltanPuntajes}`;
+                }
+                
+                Utils.showAlert(mensaje, fallidos > 0 ? 'warning' : 'success', 10000);
+
+                // Marcar todas las preguntas guardadas visualmente
+                result.results.forEach((res, idx) => {
+                    if (res.success) {
+                        const card = document.getElementById(`pregunta-${idx}`);
+                        if (card) {
+                            card.style.borderLeftColor = 'var(--success)';
+                            card.style.borderLeftWidth = '6px';
+                        }
+                    }
+                });
+
+                // Si hubo éxitos, recargar después de un momento
+                if (exitosos > 0) {
+                    setTimeout(() => {
+                        Utils.showAlert('Recargando datos actualizados...', 'info', 2000);
+                        closeModal();
+                        verIntentos(currentQuiz);
+                    }, 3000);
+                }
+
+            } catch (error) {
+                Utils.hideLoading();
+                console.error('Error al guardar:', error);
+                
+                let errorMsg = `❌ Error al guardar en Moodle:\n${error.message}\n\n`;
+                errorMsg += `💡 Opciones:\n`;
+                errorMsg += `1. Verifica tus permisos de profesor\n`;
+                errorMsg += `2. Guarda pregunta por pregunta\n`;
+                errorMsg += `3. Usa el bookmarklet como alternativa`;
+                
+                Utils.showAlert(errorMsg, 'error', 12000);
+            }
+        }
+
+        // ========== GUARDAR PARA BOOKMARKLET (MÉTODO ANTERIOR) ==========
+
+        // Guardar TODAS las calificaciones en sessionStorage para el bookmarklet
+        async function guardarTodasLasCalificaciones() {
+            const preguntasConRespuestas = window.currentPreguntasRevision;
+            
+            if (!preguntasConRespuestas || preguntasConRespuestas.length === 0) {
+                Utils.showAlert('No hay preguntas para guardar', 'warning');
+                return;
+            }
+
+            // Verificar que todas tengan puntaje asignado
+            const calificaciones = [];
+            let faltanPuntajes = 0;
+
+            for (let i = 0; i < preguntasConRespuestas.length; i++) {
+                const pregunta = preguntasConRespuestas[i];
+                const puntosInput = document.getElementById(`puntos-${i}`);
+                const puntos = puntosInput ? parseFloat(puntosInput.value) : null;
+
+                if (puntos === null || isNaN(puntos)) {
+                    faltanPuntajes++;
+                    continue;
+                }
+
+                // Extraer solo la retroalimentación del nuevo formato
+                let comentarioLimpio = '';
+                if (pregunta.feedback) {
+                    const regex = /RETROALIMENTACIÓN PARA EL ESTUDIANTE:\s*\n([\s\S]+)/i;
+                    const match = pregunta.feedback.match(regex);
+                    
+                    if (match && match[1]) {
+                        comentarioLimpio = match[1].trim();
+                    } else {
+                        comentarioLimpio = pregunta.feedback;
+                    }
+                    
+                    comentarioLimpio = comentarioLimpio
+                        .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
+                        .replace(/\*\*(.+?)\*\*/g, '$1')
+                        .replace(/\*(.+?)\*/g, '$1')
+                        .replace(/__(.+?)__/g, '$1')
+                        .replace(/_(.+?)_/g, '$1')
+                        .replace(/~~(.+?)~~/g, '$1')
+                        .replace(/`(.+?)`/g, '$1')
+                        .replace(/^#{1,6}\s+/gm, '')
+                        .replace(/^\s*[-*+]\s+/gm, '• ')
+                        .replace(/^\s*\d+\.\s+/gm, '')
+                        .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+                        .replace(/>\s+/gm, '')
+                        .replace(/---+/g, '')
+                        .replace(/\n{3,}/g, '\n\n')
+                        .trim();
+                }
+
+                calificaciones.push({
+                    slot: pregunta.slot,
+                    puntos: puntos,
+                    maxPuntos: pregunta.maxmark,
+                    comentario: comentarioLimpio,
+                    preguntaTexto: pregunta.questionText.substring(0, 100)
+                });
+            }
+
+            if (calificaciones.length === 0) {
+                Utils.showAlert('No hay calificaciones para guardar. Primero asigná puntajes.', 'warning');
+                return;
+            }
+
+            // Guardar en sessionStorage
+            const dataParaMoodle = {
+                attemptId: currentAttemptForReview.id,
+                studentName: currentAttemptForReview.firstname,
+                calificaciones: calificaciones,
+                timestamp: Date.now()
+            };
+
+            sessionStorage.setItem('dianoia_calificaciones_multiple', JSON.stringify(dataParaMoodle));
+
+            const mensaje = faltanPuntajes > 0 
+                ? `✅ Guardado para bookmarklet!\n\n• ${calificaciones.length} preguntas guardadas\n• ${faltanPuntajes} preguntas sin puntaje (se omitieron)\n\nAhora abrí cada pregunta en Moodle y usá el bookmarklet`
+                : `✅ Guardado para bookmarklet!\n\n• ${calificaciones.length} preguntas guardadas\n\nAhora abrí cada pregunta en Moodle y usá el bookmarklet`;
+
+            Utils.showAlert(mensaje, 'success', 8000);
+
+            // Marcar visualmente
+            calificaciones.forEach((cal, idx) => {
+                const card = document.getElementById(`pregunta-${idx}`);
+                if (card) {
+                    card.style.borderLeftColor = '#f59e0b';
+                    card.style.borderLeftWidth = '6px';
+                }
+            });
+        }
+
+        // Guardar calificación de una pregunta individual para bookmarklet
+        async function guardarCalificacionPregunta(preguntaIdx) {
+            const puntos = parseFloat(document.getElementById(`puntos-${preguntaIdx}`).value);
+            const pregunta = window.currentPreguntasRevision[preguntaIdx];
+            
+            if (isNaN(puntos)) {
+                Utils.showAlert('Por favor ingresa un puntaje válido', 'warning');
+                return;
+            }
+
+            if (puntos < 0 || puntos > pregunta.maxmark) {
+                Utils.showAlert(`El puntaje debe estar entre 0 y ${pregunta.maxmark}`, 'warning');
+                return;
+            }
+
+            // Guardar en la pregunta
+            window.currentPreguntasRevision[preguntaIdx].calificacion = puntos;
+            
+            let comentarioParaMoodle = '';
+            if (pregunta.feedback) {
+                const regex = /RETROALIMENTACIÓN PARA EL ESTUDIANTE:\s*\n([\s\S]+)/i;
+                const match = pregunta.feedback.match(regex);
+                
+                if (match && match[1]) {
+                    comentarioParaMoodle = match[1].trim();
+                } else {
+                    comentarioParaMoodle = pregunta.feedback;
+                }
+                
+                comentarioParaMoodle = comentarioParaMoodle
+                    .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
+                    .replace(/\*\*(.+?)\*\*/g, '$1')
+                    .replace(/\*(.+?)\*/g, '$1')
+                    .replace(/__(.+?)__/g, '$1')
+                    .replace(/_(.+?)_/g, '$1')
+                    .replace(/~~(.+?)~~/g, '$1')
+                    .replace(/`(.+?)`/g, '$1')
+                    .replace(/^#{1,6}\s+/gm, '')
+                    .replace(/^\s*[-*+]\s+/gm, '• ')
+                    .replace(/^\s*\d+\.\s+/gm, '')
+                    .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+                    .replace(/>\s+/gm, '')
+                    .replace(/---+/g, '')
+                    .replace(/\n{3,}/g, '\n\n')
+                    .trim();
+            }
+
+            // Preparar datos para el bookmarklet
+            const dataParaMoodle = {
+                puntos: puntos,
+                maxPuntos: pregunta.maxmark,
+                comentario: comentarioParaMoodle,
+                timestamp: Date.now()
+            };
+
+            sessionStorage.setItem('dianoia_calificacion', JSON.stringify(dataParaMoodle));
+
+            const textoCopiar = comentarioParaMoodle 
+                ? `Puntuación: ${puntos}/${pregunta.maxmark}\n\nComentario:\n${comentarioParaMoodle}`
+                : `Puntuación: ${puntos}/${pregunta.maxmark}`;
+
+            try {
+                await navigator.clipboard.writeText(textoCopiar);
+                
+                const alertDiv = Utils.showAlert(
+                    `✓ Guardado para bookmarklet!\n\n• Puntos: ${puntos}/${pregunta.maxmark}\n• Comentario copiado al portapapeles\n• Datos guardados`, 
+                    'success', 
+                    8000
+                );
+                
+                // Cambiar el color del borde
+                const card = document.getElementById(`pregunta-${preguntaIdx}`);
+                card.style.borderLeftColor = '#f59e0b';
+                card.style.borderLeftWidth = '6px';
+                
+                const header = card.querySelector('h4');
+                if (header && !header.querySelector('.badge-warning')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge badge-warning';
+                    badge.style.marginLeft = '0.5rem';
+                    badge.textContent = `📋 ${puntos}/${pregunta.maxmark}`;
+                    header.appendChild(badge);
+                }
+                
+            } catch (error) {
+                console.error('Error al copiar:', error);
+                Utils.showAlert('Puntaje guardado, pero no se pudo copiar al portapapeles', 'warning');
+            }
+        }
+
+        // Revisar una pregunta individual con IA
+        async function revisarPreguntaConIA(preguntaIdx, puntajeMax) {
+            const pregunta = window.currentPreguntasRevision[preguntaIdx];
+            const materiaSeleccionada = document.getElementById('materiaSelector').value;
+            
+            const feedbackDiv = document.getElementById(`feedback-${preguntaIdx}`);
+            feedbackDiv.style.display = 'block';
+            feedbackDiv.innerHTML = `
+                <div class="loading" style="padding: 1rem;">
+                    <div class="spinner" style="width: 30px; height: 30px;"></div>
+                    <p style="margin: 0.5rem 0;">Analizando respuesta...</p>
+                </div>
+            `;
+
+            try {
+                const materiasMap = {
+                    'general': 'General',
+                    'antropologia': 'Antropología Filosófica',
+                    'antigua': 'Historia de la Filosofía Antigua',
+                    'contemporanea': 'Filosofía Contemporánea',
+                    'etica': 'Ética',
+                    'metodologia': 'Metodología de la Investigación',
+                    'logica': 'Lógica Formal'
+                };
+
+                const feedback = await geminiAPI.analizarPreguntaIndividual(
+                    pregunta.questionText,
+                    pregunta.studentResponse,
+                    materiasMap[materiaSeleccionada],
+                    puntajeMax,
+                    currentAttemptForReview.firstname
+                );
+                
+                window.currentPreguntasRevision[preguntaIdx].feedback = feedback;
+                
+                function formatearTexto(text) {
+                    return text
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                        .replace(/\n/g, '<br>')
+                        .replace(/^(\d+\.)\s/gm, '<br>$1 ');
+                }
+                
+                feedbackDiv.innerHTML = `
+                    <div style="color: #0369a1; margin-bottom: 0.5rem;">
+                        <strong>🔍 Análisis de IA:</strong>
+                    </div>
+                    <div style="
+                        background: #f8fafc; 
+                        border-left: 4px solid #0369a1; 
+                        padding: 1rem; 
+                        border-radius: 4px;
+                        color: #374151;
+                        line-height: 1.6;
+                        max-height: none;
+                        overflow: visible;
+                        white-space: pre-wrap;
+                        word-wrap: break-word;
+                    ">
+                        ${formatearTexto(feedback)}
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error al analizar pregunta:', error);
+                feedbackDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        Error al analizar: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Calificar manualmente (legacy)
+        function calificarManual(attemptIndex) {
+            const attempt = filteredAttempts[attemptIndex];
+            if (!attempt) return;
+
+            Utils.showAlert('Para calificar manualmente, usa la opción "Revisar con IA" y luego guarda directamente en Moodle o usa el bookmarklet.', 'info');
+        }
+
+        // Revisar todos con IA
+        async function revisarTodosConIA() {
+            const pendientes = allAttempts.filter(a => a.needsReview);
+            
+            if (pendientes.length === 0) {
+                Utils.showAlert('No hay intentos pendientes de revisar', 'info');
+                return;
+            }
+
+            Utils.showAlert(`Hay ${pendientes.length} intentos pendientes. Selecciona cada uno individualmente para revisarlo con IA.`, 'info');
+        }
+
+        // Exportar resultados
+        function exportarResultados() {
+            const data = allAttempts.map(attempt => ({
+                'Estudiante': attempt.studentName,
+                'Intento': attempt.attempt,
+                'Puntuación': attempt.sumgrades?.toFixed(2) || 'Sin calificar',
+                'Calificación máxima': currentQuiz.grade || 10,
+                'Completado': Utils.formatDate(attempt.timefinish, 'full'),
+                'Necesita revisión': attempt.needsReview ? 'Sí' : 'No',
+                'Preguntas de texto': attempt.essayQuestions.length
+            }));
+
+            Utils.exportToCSV(data, `${currentCourse.shortname}_${currentQuiz.name}_resultados.csv`);
+            Utils.showAlert('Resultados exportados', 'success');
+        }
+
+        // Recargar datos
+        async function recargarDatos() {
+            if (viewMode === 'list') {
+                await cargarCurso(currentCourse.id);
+            } else {
+                await verIntentos(currentQuiz);
+            }
+        }
+
+        // Funciones de modal
+        function openModal(title, body = '') {
+            document.getElementById('modalTitle').textContent = title;
+            if (body) {
+                document.getElementById('modalBody').innerHTML = body;
+            }
+            document.getElementById('reviewModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('reviewModal').classList.remove('show');
+        }
+    </script>
+</body>
+</html>

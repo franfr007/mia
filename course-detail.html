@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIANOIA - Detalle del Curso</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="navbar-brand">
+                <img src="dianoia_logo.jpg" alt="DIANOIA" class="navbar-logo">
+                <h1>DIANOIA</h1>
+            </div>
+            <div class="navbar-info">
+                <div class="user-badge">
+                    <span>👤</span>
+                    <span id="userName">Cargando...</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTAINER -->
+    <div class="container">
+        
+        <!-- BOTÓN VOLVER -->
+        <button class="btn btn-secondary mb-2" onclick="Utils.navigateTo('index.html')">
+            ← Volver a materias
+        </button>
+
+        <!-- HEADER DEL CURSO -->
+        <div class="card mb-3" id="courseHeader">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title" id="courseTitle">Cargando...</h2>
+                    <p style="color: var(--gray); margin-top: 0.5rem;" id="courseShortname"></p>
+                </div>
+                <button class="btn btn-outline" onclick="recargarCurso()">
+                    🔄 Recargar
+                </button>
+            </div>
+        </div>
+
+        <!-- ESTADÍSTICAS DEL CURSO -->
+        <div class="stats-grid" id="courseStats">
+            <div class="stat-card">
+                <h3>📝 Tareas</h3>
+                <div class="number" id="statAssignments">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>❓ Cuestionarios</h3>
+                <div class="number" id="statQuizzes">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>💬 Foros</h3>
+                <div class="number" id="statForums">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>📄 Recursos</h3>
+                <div class="number" id="statResources">-</div>
+            </div>
+        </div>
+
+        <!-- TABS DE RECURSOS -->
+        <div class="card">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('assignments')">📝 Tareas</div>
+                <div class="tab" onclick="switchTab('quizzes')">❓ Cuestionarios</div>
+                <div class="tab" onclick="switchTab('forums')">💬 Foros</div>
+                <div class="tab" onclick="switchTab('pages')">📄 Páginas</div>
+                <div class="tab" onclick="switchTab('files')">📁 Archivos</div>
+                <div class="tab" onclick="switchTab('labels')">🏷️ Etiquetas</div>
+            </div>
+
+            <!-- TAB: TAREAS -->
+            <div id="assignmentsTab" class="tab-content active">
+                <div class="flex-between mb-2">
+                    <h3>Tareas del curso</h3>
+                    <button class="btn btn-primary" onclick="Utils.navigateTo('assignments.html', {courseId: currentCourse.id})">
+                        Ver gestión completa →
+                    </button>
+                </div>
+                <div id="assignmentsList">
+                    <div class="loading"><div class="spinner"></div><p>Cargando tareas...</p></div>
+                </div>
+            </div>
+
+            <!-- TAB: CUESTIONARIOS -->
+            <div id="quizzesTab" class="tab-content">
+                <div class="flex-between mb-2">
+                    <h3>Cuestionarios del curso</h3>
+                    <button class="btn btn-primary" onclick="Utils.navigateTo('quizzes.html', {courseId: currentCourse.id})">
+                        Ver gestión completa →
+                    </button>
+                </div>
+                <div id="quizzesList">
+                    <div class="loading"><div class="spinner"></div><p>Cargando cuestionarios...</p></div>
+                </div>
+            </div>
+
+            <!-- TAB: FOROS -->
+            <div id="forumsTab" class="tab-content">
+                <div class="flex-between mb-2">
+                    <h3>Foros del curso</h3>
+                    <div class="flex gap-2">
+                        <button class="btn btn-outline" onclick="crearForo()">
+                            ➕ Nuevo foro
+                        </button>
+                        <button class="btn btn-primary" onclick="Utils.navigateTo('forums.html', {courseId: currentCourse.id})">
+                            Ver gestión completa →
+                        </button>
+                    </div>
+                </div>
+                <div id="forumsList">
+                    <div class="loading"><div class="spinner"></div><p>Cargando foros...</p></div>
+                </div>
+            </div>
+
+            <!-- TAB: PÁGINAS -->
+            <div id="pagesTab" class="tab-content">
+                <div class="flex-between mb-2">
+                    <h3>Páginas del curso</h3>
+                    <div class="flex gap-2">
+                        <button class="btn btn-outline" onclick="crearPaginaConIA()">
+                            ➕ Nueva página con IA
+                        </button>
+                        <button class="btn btn-primary" onclick="generarContenidoIA()">
+                            🤖 Generar solo contenido
+                        </button>
+                    </div>
+                </div>
+                <div id="pagesList">
+                    <div class="loading"><div class="spinner"></div><p>Cargando páginas...</p></div>
+                </div>
+            </div>
+
+            <!-- TAB: ARCHIVOS -->
+            <div id="filesTab" class="tab-content">
+                <div class="flex-between mb-2">
+                    <h3>Archivos y recursos</h3>
+                </div>
+                <div id="filesList">
+                    <div class="loading"><div class="spinner"></div><p>Cargando archivos...</p></div>
+                </div>
+            </div>
+
+            <!-- TAB: ETIQUETAS -->
+            <div id="labelsTab" class="tab-content">
+                <div class="flex-between mb-2">
+                    <h3>Etiquetas del curso</h3>
+                    <button class="btn btn-outline" onclick="crearEtiquetaConIA()">
+                        ➕ Nueva etiqueta con IA
+                    </button>
+                </div>
+                <div id="labelsList">
+                    <div class="loading"><div class="spinner"></div><p>Cargando etiquetas...</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GENÉRICO -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Modal</h2>
+                <span class="close-modal" onclick="closeModal()">×</span>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/utils.js"></script>
+    <script src="js/moodle-api.js"></script>
+    <script src="js/gemini-api.js"></script>
+    
+    <script>
+        let currentCourse = null;
+        let courseData = {
+            assignments: [],
+            quizzes: [],
+            forums: [],
+            pages: [],
+            files: [],
+            labels: []
+        };
+        let activeTab = 'assignments';
+
+        // Inicializar
+        window.onload = async function() {
+            // Verificar configuración
+            if (!moodleAPI.isConfigured()) {
+                Utils.showAlert('No estás conectado. Redirigiendo...', 'warning');
+                setTimeout(() => Utils.navigateTo('index.html'), 2000);
+                return;
+            }
+
+            // Obtener ID del curso de la URL
+            const params = Utils.getUrlParams();
+            const courseId = params.id;
+
+            if (!courseId) {
+                Utils.showAlert('No se especificó un curso', 'error');
+                setTimeout(() => Utils.navigateTo('index.html'), 2000);
+                return;
+            }
+
+            // Cargar información del usuario
+            const userInfo = await moodleAPI.getSiteInfo();
+            document.getElementById('userName').textContent = userInfo.fullname;
+
+            // Cargar curso
+            await cargarCurso(courseId);
+        };
+
+        // Cargar curso
+        async function cargarCurso(courseId) {
+            try {
+                Utils.showLoading('Cargando curso...');
+
+                // Obtener información del curso
+                const courses = await moodleAPI.getCourses();
+                currentCourse = courses.find(c => c.id == courseId);
+
+                if (!currentCourse) {
+                    throw new Error('Curso no encontrado');
+                }
+
+                // Actualizar header
+                document.getElementById('courseTitle').textContent = currentCourse.fullname;
+                document.getElementById('courseShortname').textContent = currentCourse.shortname;
+
+                // Cargar todos los recursos
+                await cargarTodosLosRecursos(courseId);
+
+                Utils.hideLoading();
+                Utils.showAlert('Curso cargado correctamente', 'success', 2000);
+
+            } catch (error) {
+                console.error('Error:', error);
+                Utils.showAlert(`Error al cargar el curso: ${error.message}`, 'error');
+                Utils.hideLoading();
+            }
+        }
+
+        // Cargar todos los recursos del curso
+        async function cargarTodosLosRecursos(courseId) {
+            try {
+                // Cargar en paralelo
+                const [assignments, quizzes, forums, pages, resources, labels] = await Promise.all([
+                    moodleAPI.getAssignments([courseId]).catch(() => ({ courses: [] })),
+                    moodleAPI.getQuizzes([courseId]).catch(() => ({ quizzes: [] })),
+                    moodleAPI.getForumsByCourses([courseId]).catch(() => []),
+                    moodleAPI.getPages([courseId]).catch(() => ({ pages: [] })),
+                    moodleAPI.getResources([courseId]).catch(() => ({ resources: [] })),
+                    moodleAPI.getLabels([courseId]).catch(() => ({ labels: [] }))
+                ]);
+
+                // Guardar datos
+                courseData.assignments = assignments.courses?.[0]?.assignments || [];
+                courseData.quizzes = quizzes.quizzes || [];
+                courseData.forums = forums || [];
+                courseData.pages = pages.pages || [];
+                courseData.files = resources.resources || [];
+                courseData.labels = labels.labels || [];
+
+                // Actualizar estadísticas
+                document.getElementById('statAssignments').textContent = courseData.assignments.length;
+                document.getElementById('statQuizzes').textContent = courseData.quizzes.length;
+                document.getElementById('statForums').textContent = courseData.forums.length;
+                document.getElementById('statResources').textContent = 
+                    courseData.pages.length + courseData.files.length + courseData.labels.length;
+
+                // Mostrar el tab activo
+                mostrarTabActivo();
+
+            } catch (error) {
+                console.error('Error cargando recursos:', error);
+                Utils.showAlert('Error al cargar algunos recursos', 'warning');
+            }
+        }
+
+        // Cambiar tab
+        function switchTab(tabName) {
+            activeTab = tabName;
+            
+            // Actualizar tabs visuales
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            
+            const tabs = ['assignments', 'quizzes', 'forums', 'pages', 'files', 'labels'];
+            const index = tabs.indexOf(tabName);
+            
+            document.querySelectorAll('.tab')[index].classList.add('active');
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+            
+            mostrarTabActivo();
+        }
+
+        // Mostrar contenido del tab activo
+        function mostrarTabActivo() {
+            switch(activeTab) {
+                case 'assignments':
+                    mostrarTareas();
+                    break;
+                case 'quizzes':
+                    mostrarCuestionarios();
+                    break;
+                case 'forums':
+                    mostrarForos();
+                    break;
+                case 'pages':
+                    mostrarPaginas();
+                    break;
+                case 'files':
+                    mostrarArchivos();
+                    break;
+                case 'labels':
+                    mostrarEtiquetas();
+                    break;
+            }
+        }
+
+        // === TAREAS ===
+        function mostrarTareas() {
+            const container = document.getElementById('assignmentsList');
+            
+            if (courseData.assignments.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No hay tareas en este curso</div>';
+                return;
+            }
+
+            container.innerHTML = courseData.assignments.map(assignment => `
+                <div class="card mb-2">
+                    <div class="flex-between">
+                        <div>
+                            <h4 style="color: var(--dianoia-blue);">${assignment.name}</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">
+                                📅 Cierre: ${assignment.duedate ? Utils.formatDate(assignment.duedate, 'medium') : 'Sin fecha límite'}
+                            </p>
+                        </div>
+                        <button class="btn btn-primary" onclick="Utils.navigateTo('assignments.html', {courseId: ${currentCourse.id}, assignmentId: ${assignment.id}})">
+                            Ver entregas →
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // === CUESTIONARIOS ===
+        function mostrarCuestionarios() {
+            const container = document.getElementById('quizzesList');
+            
+            if (courseData.quizzes.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No hay cuestionarios en este curso</div>';
+                return;
+            }
+
+            container.innerHTML = courseData.quizzes.map(quiz => `
+                <div class="card mb-2">
+                    <div class="flex-between">
+                        <div>
+                            <h4 style="color: var(--dianoia-blue);">${quiz.name}</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">
+                                📅 Cierre: ${quiz.timeclose ? Utils.formatDate(quiz.timeclose, 'medium') : 'Sin límite'}
+                                | ⏱️ Tiempo: ${quiz.timelimit ? `${quiz.timelimit/60} min` : 'Ilimitado'}
+                            </p>
+                        </div>
+                        <button class="btn btn-primary" onclick="Utils.navigateTo('quizzes.html', {courseId: ${currentCourse.id}, quizId: ${quiz.id}})">
+                            Ver intentos →
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // === FOROS ===
+        function mostrarForos() {
+            const container = document.getElementById('forumsList');
+            
+            if (courseData.forums.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No hay foros en este curso</div>';
+                return;
+            }
+
+            container.innerHTML = courseData.forums.map(forum => `
+                <div class="card mb-2">
+                    <div class="flex-between">
+                        <div>
+                            <h4 style="color: var(--dianoia-blue);">${forum.name}</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">
+                                ${Utils.truncate(forum.intro || 'Sin descripción', 100)}
+                            </p>
+                        </div>
+                        <button class="btn btn-primary" onclick="Utils.navigateTo('forums.html', {courseId: ${currentCourse.id}, forumId: ${forum.id}})">
+                            Ver discusiones →
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // === PÁGINAS ===
+        function mostrarPaginas() {
+            const container = document.getElementById('pagesList');
+            
+            if (courseData.pages.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No hay páginas en este curso</div>';
+                return;
+            }
+
+            container.innerHTML = courseData.pages.map(page => `
+                <div class="card mb-2">
+                    <div class="flex-between">
+                        <div>
+                            <h4 style="color: var(--dianoia-blue);">${page.name}</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">
+                                ${Utils.truncate(page.intro || 'Sin descripción', 100)}
+                            </p>
+                        </div>
+                        <div class="flex gap-1">
+                            <button class="btn btn-outline" onclick="verPagina(${page.id})">
+                                👁️ Ver
+                            </button>
+                            <button class="btn btn-warning" onclick="editarConIA(${page.id}, 'page')">
+                                🤖 Editar con IA
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // === ARCHIVOS ===
+        function mostrarArchivos() {
+            const container = document.getElementById('filesList');
+            
+            if (courseData.files.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No hay archivos en este curso</div>';
+                return;
+            }
+
+            container.innerHTML = courseData.files.map(file => {
+                const fileUrl = file.fileurl || file.contentfiles?.[0]?.fileurl;
+                return `
+                    <div class="card mb-2">
+                        <div class="flex-between">
+                            <div>
+                                <h4 style="color: var(--dianoia-blue);">📎 ${file.name}</h4>
+                                <p style="color: var(--gray); font-size: 0.9rem;">
+                                    ${Utils.truncate(file.intro || 'Archivo del curso', 100)}
+                                </p>
+                            </div>
+                            <button class="btn btn-primary" onclick="descargarArchivo('${fileUrl}')">
+                                Descargar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Función para descargar archivo con token
+        function descargarArchivo(fileUrl) {
+            if (!fileUrl) {
+                Utils.showAlert('URL del archivo no disponible', 'error');
+                return;
+            }
+
+            // Obtener el token desde moodleConfig (donde realmente está guardado)
+            let token = null;
+            
+            // Opción 1: Desde moodleAPI (forma preferida)
+            if (typeof moodleAPI !== 'undefined' && moodleAPI.config && moodleAPI.config.token) {
+                token = moodleAPI.config.token;
+            }
+            
+            // Opción 2: Desde localStorage directamente
+            if (!token) {
+                const config = localStorage.getItem('moodleConfig');
+                if (config) {
+                    try {
+                        const parsedConfig = JSON.parse(config);
+                        token = parsedConfig.token;
+                    } catch (e) {
+                        console.error('Error parseando moodleConfig:', e);
+                    }
+                }
+            }
+            
+            if (!token) {
+                Utils.showAlert('Token no encontrado. Por favor, verifica tu configuración en la página principal.', 'error');
+                console.error('Token no encontrado en moodleConfig');
+                return;
+            }
+
+            // Agregar el token a la URL
+            const separator = fileUrl.includes('?') ? '&' : '?';
+            const urlWithToken = `${fileUrl}${separator}token=${token}`;
+            
+            // Abrir en nueva pestaña
+            window.open(urlWithToken, '_blank');
+        }
+
+        // === ETIQUETAS ===
+        function mostrarEtiquetas() {
+            const container = document.getElementById('labelsList');
+            
+            if (courseData.labels.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No hay etiquetas en este curso</div>';
+                return;
+            }
+
+            container.innerHTML = courseData.labels.map(label => `
+                <div class="card mb-2">
+                    <div style="padding: 1rem; border-left: 4px solid var(--dianoia-blue);">
+                        ${label.intro || 'Sin contenido'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // === ACCIONES ===
+        function crearForo() {
+            // Verificar que hay foros disponibles
+            if (courseData.forums.length === 0) {
+                Utils.showAlert('No hay foros disponibles en este curso para crear discusiones.', 'warning');
+                return;
+            }
+
+            openModal('Crear nueva discusión en foro', `
+                <div class="alert alert-info">
+                    💡 Puedes crear una nueva discusión en cualquiera de los foros del curso. La IA puede ayudarte a generar el contenido.
+                </div>
+                
+                <div class="form-group">
+                    <label>Selecciona el foro:</label>
+                    <select id="forumSelect" class="form-control">
+                        ${courseData.forums.map(forum => `
+                            <option value="${forum.id}">${forum.name}</option>
+                        `).join('')}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Título de la discusión:</label>
+                    <input type="text" id="discussionSubject" class="form-control" placeholder="Ej: Reflexiones sobre la ética kantiana">
+                    <small>El título debe ser claro y descriptivo</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>¿Usar IA para generar el mensaje?</label>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="useAI" value="yes" checked onchange="toggleAIOptions()">
+                            <span>Sí, generar con IA</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="useAI" value="no" onchange="toggleAIOptions()">
+                            <span>No, escribir manualmente</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="aiOptions">
+                    <div class="form-group">
+                        <label>Tema o pregunta para la discusión:</label>
+                        <textarea id="discussionTopic" class="form-control" rows="3" placeholder="Describe el tema que quieres discutir..."></textarea>
+                        <small>La IA generará un mensaje inicial basado en este tema</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Tipo de discusión:</label>
+                        <select id="discussionType" class="form-control">
+                            <option value="pregunta">Pregunta para reflexión</option>
+                            <option value="debate">Debate / Discusión</option>
+                            <option value="anuncio">Anuncio / Información</option>
+                            <option value="recurso">Compartir recurso</option>
+                            <option value="consulta">Consulta académica</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="manualOptions" style="display: none;">
+                    <div class="form-group">
+                        <label>Mensaje de la discusión:</label>
+                        <textarea id="discussionManualMessage" class="form-control" rows="6" placeholder="Escribe tu mensaje aquí..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2 mt-2">
+                    <button class="btn btn-secondary" onclick="closeModal()">
+                        Cancelar
+                    </button>
+                    <button class="btn btn-primary" onclick="procesarCreacionDiscusion()">
+                        📝 Crear discusión
+                    </button>
+                </div>
+            `);
+
+            window.toggleAIOptions = function() {
+                const useAI = document.querySelector('input[name="useAI"]:checked').value === 'yes';
+                document.getElementById('aiOptions').style.display = useAI ? 'block' : 'none';
+                document.getElementById('manualOptions').style.display = useAI ? 'none' : 'block';
+            };
+        }
+
+        async function procesarCreacionDiscusion() {
+            const forumId = parseInt(document.getElementById('forumSelect').value);
+            const subject = document.getElementById('discussionSubject').value.trim();
+            const useAI = document.querySelector('input[name="useAI"]:checked').value === 'yes';
+
+            if (!subject) {
+                Utils.showAlert('Por favor ingresa un título para la discusión', 'warning');
+                return;
+            }
+
+            let message = '';
+
+            try {
+                if (useAI) {
+                    const topic = document.getElementById('discussionTopic').value.trim();
+                    const type = document.getElementById('discussionType').value;
+
+                    if (!topic) {
+                        Utils.showAlert('Por favor describe el tema de la discusión', 'warning');
+                        return;
+                    }
+
+                    Utils.showLoading('Generando mensaje con IA...');
+                    closeModal();
+
+                    // Generar mensaje con IA
+                    message = await geminiAPI.generarMensajeForo(subject, topic, type);
+
+                } else {
+                    message = document.getElementById('discussionManualMessage').value.trim();
+                    
+                    if (!message) {
+                        Utils.showAlert('Por favor escribe un mensaje para la discusión', 'warning');
+                        return;
+                    }
+
+                    Utils.showLoading('Creando discusión...');
+                    closeModal();
+                }
+
+                // Crear la discusión en Moodle
+                const result = await moodleAPI.addDiscussion(forumId, subject, message);
+
+                Utils.hideLoading();
+
+                if (result.discussionid) {
+                    Utils.showAlert('✅ Discusión creada exitosamente en el foro', 'success');
+                    
+                    // Recargar foros
+                    const forums = await moodleAPI.getForumsByCourses([currentCourse.id]).catch(() => []);
+                    courseData.forums = forums || [];
+                    
+                    // Si estamos en el tab de foros, actualizar
+                    if (activeTab === 'forums') {
+                        mostrarForos();
+                    }
+                } else {
+                    Utils.showAlert('La discusión fue creada pero no se recibió confirmación', 'warning');
+                }
+
+            } catch (error) {
+                Utils.hideLoading();
+                console.error('Error creando discusión:', error);
+                Utils.showAlert('Error al crear la discusión: ' + error.message, 'error');
+            }
+        }
+
+        // Crear página con IA
+        function crearPaginaConIA() {
+            openModal('Crear nueva página con IA', `
+                <div class="alert alert-info">
+                    💡 La IA te ayudará a generar el contenido de la página basándose en el tema que especifiques.
+                </div>
+                <div class="form-group">
+                    <label>Nombre de la página:</label>
+                    <input type="text" id="pageName" class="form-control" placeholder="Ej: Introducción a la Ética Kantiana">
+                    <small>Este será el título visible de la página</small>
+                </div>
+                <div class="form-group">
+                    <label>Tema / Descripción del contenido:</label>
+                    <textarea id="pageDescription" class="form-control" rows="3" placeholder="Describe brevemente qué contenido debe generar la IA..."></textarea>
+                    <small>Cuanto más específico seas, mejor será el resultado</small>
+                </div>
+                <div class="form-group">
+                    <label>Nivel académico:</label>
+                    <select id="pageLevel" class="form-control">
+                        <option value="universitario">Universitario</option>
+                        <option value="secundario">Secundario</option>
+                        <option value="general">General</option>
+                        <option value="avanzado">Avanzado/Postgrado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Extensión del contenido:</label>
+                    <select id="pageLength" class="form-control">
+                        <option value="corto">Corto (~300 palabras)</option>
+                        <option value="medio">Medio (~600 palabras)</option>
+                        <option value="largo">Largo (~1000 palabras)</option>
+                        <option value="muy_largo">Muy largo (~1500+ palabras)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Estilo de escritura:</label>
+                    <select id="pageStyle" class="form-control">
+                        <option value="academico">Académico formal</option>
+                        <option value="didactico">Didáctico/Educativo</option>
+                        <option value="divulgativo">Divulgativo</option>
+                        <option value="tecnico">Técnico/Especializado</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 mt-2">
+                    <button class="btn btn-secondary" onclick="closeModal()">
+                        Cancelar
+                    </button>
+                    <button class="btn btn-primary" onclick="procesarCreacionPagina()">
+                        🤖 Generar página con IA
+                    </button>
+                </div>
+            `);
+        }
+
+        // Procesar creación de página
+        async function procesarCreacionPagina() {
+            const name = document.getElementById('pageName').value.trim();
+            const description = document.getElementById('pageDescription').value.trim();
+            const level = document.getElementById('pageLevel').value;
+            const length = document.getElementById('pageLength').value;
+            const style = document.getElementById('pageStyle').value;
+
+            if (!name || !description) {
+                Utils.showAlert('Por favor completa el nombre y la descripción', 'warning');
+                return;
+            }
+
+            Utils.showLoading('Generando contenido con IA...');
+            closeModal();
+
+            try {
+                const prompt = 'Genera contenido educativo sobre: "' + description + '". Nivel: ' + level + '. Estilo: ' + style + '. Extensión: ' + length + '. El contenido debe ser estructurado con: una introducción clara, secciones con subtítulos, explicaciones detalladas, ejemplos cuando sea relevante, y una conclusión o resumen. Usa formato HTML con etiquetas h3, p, ul, li, strong, em cuando sea apropiado.';
+                
+                const content = await geminiAPI.generarContenidoPagina(prompt, level, length);
+                
+                Utils.hideLoading();
+                
+                const contentEscaped = content.replace(/'/g, "\\'").replace(/\n/g, ' ');
+                const nameEscaped = name.replace(/'/g, "\\'");
+                
+                openModal('Página generada - Vista previa', `
+                    <div class="alert alert-success">
+                        ✅ Contenido generado exitosamente
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><strong>Nombre de la página:</strong></label>
+                        <p>${name}</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><strong>Contenido generado:</strong></label>
+                        <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; max-height: 400px; overflow-y: auto; border: 1px solid #e5e7eb;">
+                            ${content}
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <strong>Próximos pasos:</strong><br>
+                        1. Copia este contenido<br>
+                        2. Ve a Moodle → Tu curso → Activar edición<br>
+                        3. Agregar actividad o recurso → Página<br>
+                        4. Pega el contenido en el editor<br>
+                        5. Guarda los cambios
+                    </div>
+                    
+                    <div class="flex gap-2 mt-2">
+                        <button class="btn btn-primary" onclick="copiarContenidoCompleto()">
+                            📋 Copiar todo
+                        </button>
+                        <button class="btn btn-outline" onclick="copiarSoloContenido()">
+                            Copiar solo contenido
+                        </button>
+                        <button class="btn btn-secondary" onclick="closeModal()">
+                            Cerrar
+                        </button>
+                    </div>
+                `);
+                
+                window.tempPageName = name;
+                window.tempPageContent = content;
+                
+            } catch (error) {
+                Utils.hideLoading();
+                Utils.showAlert('Error al generar contenido: ' + error.message, 'error');
+            }
+        }
+
+        function copiarContenidoCompleto() {
+            Utils.copyToClipboard(window.tempPageName + '\\n\\n' + window.tempPageContent);
+        }
+
+        function copiarSoloContenido() {
+            Utils.copyToClipboard(window.tempPageContent);
+        }
+
+        // Crear etiqueta con IA
+        function crearEtiquetaConIA() {
+            openModal('Crear nueva etiqueta con IA', `
+                <div class="alert alert-info">
+                    💡 Las etiquetas son bloques de texto/HTML que se muestran en el curso. La IA te ayudará a crear el contenido.
+                </div>
+                <div class="form-group">
+                    <label>Tipo de etiqueta:</label>
+                    <select id="labelType" class="form-control" onchange="actualizarPlaceholderEtiqueta()">
+                        <option value="anuncio">Anuncio o aviso importante</option>
+                        <option value="bienvenida">Mensaje de bienvenida</option>
+                        <option value="instrucciones">Instrucciones o guía</option>
+                        <option value="separador">Separador de sección</option>
+                        <option value="destacado">Contenido destacado</option>
+                        <option value="personalizado">Personalizado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Contenido o tema:</label>
+                    <textarea id="labelContent" class="form-control" rows="3" placeholder="Describe qué debe contener la etiqueta..."></textarea>
+                    <small id="labelHint">Ejemplo: "Aviso sobre el examen final del próximo viernes"</small>
+                </div>
+                <div class="form-group">
+                    <label>Estilo visual:</label>
+                    <select id="labelStyle" class="form-control">
+                        <option value="informativo">Informativo (azul)</option>
+                        <option value="importante">Importante (amarillo)</option>
+                        <option value="urgente">Urgente (rojo)</option>
+                        <option value="exitoso">Positivo (verde)</option>
+                        <option value="neutral">Neutral (gris)</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 mt-2">
+                    <button class="btn btn-secondary" onclick="closeModal()">
+                        Cancelar
+                    </button>
+                    <button class="btn btn-primary" onclick="procesarCreacionEtiqueta()">
+                        🤖 Generar etiqueta con IA
+                    </button>
+                </div>
+            `);
+            
+            window.actualizarPlaceholderEtiqueta = function() {
+                const type = document.getElementById('labelType').value;
+                const hints = {
+                    'anuncio': 'Ejemplo: "Aviso sobre el examen final del próximo viernes"',
+                    'bienvenida': 'Ejemplo: "Mensaje de bienvenida para estudiantes nuevos"',
+                    'instrucciones': 'Ejemplo: "Cómo entregar las tareas en este curso"',
+                    'separador': 'Ejemplo: "Unidad 3: Filosofía Moderna"',
+                    'destacado': 'Ejemplo: "Recursos adicionales recomendados"',
+                    'personalizado': 'Describe libremente el contenido que necesitas'
+                };
+                document.getElementById('labelHint').textContent = hints[type];
+            };
+        }
+
+        // Procesar creación de etiqueta
+        async function procesarCreacionEtiqueta() {
+            const type = document.getElementById('labelType').value;
+            const content = document.getElementById('labelContent').value.trim();
+            const style = document.getElementById('labelStyle').value;
+
+            if (!content) {
+                Utils.showAlert('Por favor describe el contenido de la etiqueta', 'warning');
+                return;
+            }
+
+            Utils.showLoading('Generando etiqueta con IA...');
+            closeModal();
+
+            try {
+                const styleColors = {
+                    'informativo': { 
+                        bg: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)', 
+                        border: '#1976d2', 
+                        icon: 'ℹ️',
+                        shadow: '0 4px 6px rgba(25, 118, 210, 0.15)'
+                    },
+                    'importante': { 
+                        bg: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)', 
+                        border: '#f57c00', 
+                        icon: '⚠️',
+                        shadow: '0 4px 6px rgba(245, 124, 0, 0.15)'
+                    },
+                    'urgente': { 
+                        bg: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)', 
+                        border: '#d32f2f', 
+                        icon: '🚨',
+                        shadow: '0 4px 6px rgba(211, 47, 47, 0.15)'
+                    },
+                    'exitoso': { 
+                        bg: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)', 
+                        border: '#388e3c', 
+                        icon: '✅',
+                        shadow: '0 4px 6px rgba(56, 142, 60, 0.15)'
+                    },
+                    'neutral': { 
+                        bg: 'linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%)', 
+                        border: '#757575', 
+                        icon: '📌',
+                        shadow: '0 4px 6px rgba(117, 117, 117, 0.15)'
+                    }
+                };
+
+                const selectedStyle = styleColors[style];
+
+                // Usar la función específica para etiquetas
+                const generatedContent = await geminiAPI.generarEtiqueta(type, content);
+                
+                // Limpiar cualquier formato markdown que pueda venir
+                const cleanContent = generatedContent
+                    .replace(/```html/g, '')
+                    .replace(/```/g, '')
+                    .replace(/^#{1,6}\s+/gm, '')
+                    .replace(/\*\*/g, '')
+                    .replace(/\*/g, '')
+                    .trim();
+                
+                // HTML mejorado con más diseño visual
+                const labelHTML = '<div style="background: ' + selectedStyle.bg + '; border-left: 5px solid ' + selectedStyle.border + '; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; box-shadow: ' + selectedStyle.shadow + '; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;"><div style="display: flex; align-items: flex-start; gap: 1rem;"><div style="font-size: 2.5rem; line-height: 1; flex-shrink: 0;">' + selectedStyle.icon + '</div><div style="flex: 1;"><div style="font-size: 1.25rem; font-weight: 600; color: ' + selectedStyle.border + '; margin-bottom: 0.75rem; letter-spacing: -0.02em;">' + content + '</div><div style="font-size: 1rem; line-height: 1.6; color: #333;">' + cleanContent + '</div></div></div></div>';
+                
+                Utils.hideLoading();
+                
+                openModal('Etiqueta generada - Vista previa', `
+                    <div class="alert alert-success">
+                        ✅ Etiqueta generada exitosamente
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><strong>Vista previa:</strong></label>
+                        <div style="border: 1px solid #e5e7eb; padding: 1rem; border-radius: 8px; background: white;">
+                            ${labelHTML}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><strong>Código HTML:</strong></label>
+                        <textarea class="form-control" rows="8" readonly style="font-family: monospace; font-size: 0.85em;">${labelHTML.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <strong>Próximos pasos:</strong><br>
+                        1. Copia el código HTML<br>
+                        2. Ve a Moodle → Tu curso → Activar edición<br>
+                        3. Agregar actividad o recurso → Etiqueta<br>
+                        4. En el editor, cambia a modo HTML (&lt;/&gt;)<br>
+                        5. Pega el código<br>
+                        6. Guarda los cambios
+                    </div>
+                    
+                    <div class="flex gap-2 mt-2">
+                        <button class="btn btn-primary" onclick="copiarHTMLEtiqueta()">
+                            📋 Copiar código HTML
+                        </button>
+                        <button class="btn btn-secondary" onclick="closeModal()">
+                            Cerrar
+                        </button>
+                    </div>
+                `);
+                
+                window.tempLabelHTML = labelHTML;
+                
+            } catch (error) {
+                Utils.hideLoading();
+                Utils.showAlert('Error al generar etiqueta: ' + error.message, 'error');
+            }
+        }
+
+        function copiarHTMLEtiqueta() {
+            Utils.copyToClipboard(window.tempLabelHTML);
+        }
+
+        function generarContenidoIA() {
+            openModal('Generar contenido con IA', `
+                <div class="form-group">
+                    <label>Tema del contenido:</label>
+                    <input type="text" id="aiTopic" class="form-control" placeholder="Ej: Introducción a la Ética Kantiana">
+                </div>
+                <div class="form-group">
+                    <label>Nivel:</label>
+                    <select id="aiLevel" class="form-control">
+                        <option value="universitario">Universitario</option>
+                        <option value="secundario">Secundario</option>
+                        <option value="general">General</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Longitud:</label>
+                    <select id="aiLength" class="form-control">
+                        <option value="corto">Corto (~300 palabras)</option>
+                        <option value="medio">Medio (~600 palabras)</option>
+                        <option value="largo">Largo (~1000 palabras)</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="procesarGeneracionIA()">
+                    🤖 Generar contenido
+                </button>
+            `);
+        }
+
+        async function procesarGeneracionIA() {
+            const topic = document.getElementById('aiTopic').value;
+            const level = document.getElementById('aiLevel').value;
+            const length = document.getElementById('aiLength').value;
+
+            if (!topic) {
+                Utils.showAlert('Ingresa un tema', 'warning');
+                return;
+            }
+
+            Utils.showLoading('Generando contenido con IA...');
+            closeModal();
+
+            try {
+                const content = await geminiAPI.generarContenidoPagina(topic, level, length);
+                
+                Utils.hideLoading();
+                openModal('Contenido generado', `
+                    <div class="alert alert-success">
+                        ✅ Contenido generado exitosamente. Ahora puedes copiarlo y pegarlo en una nueva página de Moodle.
+                    </div>
+                    <div style="background: #f9fafb; padding: 1rem; border-radius: 8px; max-height: 400px; overflow-y: auto;">
+                        ${content}
+                    </div>
+                    <button class="btn btn-primary mt-2" onclick="Utils.copyToClipboard(document.querySelector('#modalBody > div:nth-child(2)').innerText)">
+                        📋 Copiar al portapapeles
+                    </button>
+                `);
+            } catch (error) {
+                Utils.hideLoading();
+                Utils.showAlert(`Error al generar contenido: ${error.message}`, 'error');
+            }
+        }
+
+        function verPagina(pageId) {
+            const page = courseData.pages.find(p => p.id === pageId);
+            if (page) {
+                openModal(page.name, `
+                    <div style="padding: 1rem;">
+                        ${page.content || page.intro || 'Sin contenido'}
+                    </div>
+                `);
+            }
+        }
+
+        function editarConIA(pageId, type) {
+            Utils.showAlert('Función en desarrollo: Editar con IA', 'info');
+        }
+
+        // Recargar curso
+        async function recargarCurso() {
+            await cargarCurso(currentCourse.id);
+        }
+
+        // Funciones de modal
+        function openModal(title, body) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = body;
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('show');
+        }
+    </script>
+</body>
+</html>
